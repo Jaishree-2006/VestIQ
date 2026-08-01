@@ -4,7 +4,7 @@ import type { PageId, UserRole } from '../../types';
 import { ShieldCheck, User, Sparkles, ChevronDown } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentPage, setCurrentPage, role, setRole } = useApp();
+  const { currentPage, setCurrentPage, navigateTo, startOnboarding, role, setRole } = useApp();
 
   const publicPages: { id: PageId; label: string }[] = [
     { id: 'home', label: 'Product' },
@@ -28,7 +28,7 @@ export const Navbar: React.FC = () => {
         
         {/* Brand Logo */}
         <div 
-          onClick={() => setCurrentPage('home')}
+          onClick={() => navigateTo('home')}
           className="flex items-center space-x-2 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-xl bg-[#C57D25] flex items-center justify-center text-white font-bold text-xl shadow-sm group-hover:bg-[#B06C19] transition-colors">
@@ -75,12 +75,7 @@ export const Navbar: React.FC = () => {
               {(Object.keys(roleLabels) as UserRole[]).map((r) => (
                 <button
                   key={r}
-                  onClick={() => {
-                    setRole(r);
-                    if (r === 'broker_rm') setCurrentPage('broker-console');
-                    else if (r === 'compliance_officer') setCurrentPage('compliance');
-                    else if (r === 'admin') setCurrentPage('admin');
-                  }}
+                  onClick={() => { setRole(r as typeof role); }}
                   className={`w-full text-left px-3 py-1.5 text-xs font-medium flex items-center justify-between hover:bg-[#FAF8F5] transition-colors ${
                     role === r ? 'text-[#C57D25] font-bold bg-[#FAF8F5]' : 'text-[#0B1220]'
                   }`}
@@ -94,10 +89,10 @@ export const Navbar: React.FC = () => {
 
           {/* Go to App / Get Started Button */}
           <button
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => startOnboarding()}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#C57D25] text-white hover:bg-[#B06C19] transition-all shadow-sm cursor-pointer flex items-center space-x-1.5"
           >
-            <span>Open App</span>
+            <span>Get Started</span>
           </button>
         </div>
 
