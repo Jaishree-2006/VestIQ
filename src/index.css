@@ -1,0 +1,99 @@
+/* Google Sans, Google Sans Text, Inter & JetBrains Mono Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+/* Direct webfont definitions for Google Sans to guarantee rendering across all browsers */
+@font-face {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3Kwp5MKg.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3KwjpMKg.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3KwiIMKg.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Google Sans Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/googlesanstext/v21/5aUu9-D82nhh56KU0SfdMPKJ7w81wA.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Google Sans Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/googlesanstext/v21/5aUu9-D82nhh56KU0SfdMPKJ7w9TwA.woff2') format('woff2');
+}
+
+:root {
+  --bg-page: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-card-subtle: #F6F4ED;
+  --color-primary-gold: #C57D25;
+  --color-primary-gold-hover: #B06C19;
+  --color-ink: #0B1220;
+  --color-ink-muted: #64748B;
+  --color-red-flag: #E8543D;
+  --color-red-flag-bg: #FDF2F2;
+  --color-emerald: #2BB673;
+  --color-emerald-bg: #E6F4EA;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-page);
+  color: var(--color-ink);
+  font-family: 'Google Sans', 'Google Sans Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, nav, button {
+  font-family: 'Google Sans', 'Inter', sans-serif;
+}
+
+.font-mono-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Custom scrollbars for clean light UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1EFE9;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4CEBF;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B5AD9A;
+}
+
+/* Soft shadows for light mode */
+.shadow-vestiq {
+  box-shadow: 0 4px 20px -2px rgba(11, 18, 32, 0.05), 0 2px 6px -1px rgba(11, 18, 32, 0.03);
+}
+
+.shadow-vestiq-lg {
+  box-shadow: 0 12px 32px -4px rgba(197, 125, 37, 0.08), 0 4px 12px -2px rgba(11, 18, 32, 0.04);
+}
