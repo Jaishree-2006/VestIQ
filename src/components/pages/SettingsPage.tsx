@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AppSidebar } from '../layout/AppSidebar';
-import { Settings, Upload, CheckCircle2, RefreshCw, Trash2, Download, ShieldCheck } from 'lucide-react';
+import { Settings, Upload, Trash2, Download, ShieldCheck, Terminal } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { handleCasUpload, uploadedCas, resetPortfolio } = useApp();
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,22 +84,34 @@ export const SettingsPage: React.FC = () => {
           {uploadedCas && (
             <div className="mt-4 pt-4 border-t border-[#EDE9DF] text-left text-xs bg-[#FAF8F5] p-4 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
-                <div className="font-bold text-[#0B1220] text-sm">Parsed CAS Statement Active</div>
+                <div className="font-bold text-[#0B1220] text-sm">✅ Statement Parsed Successfully</div>
                 <div className="flex items-center space-x-2">
                   <span className="text-[10px] bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-bold">
-                    Tier 1: Rule-Based Template Engine
+                    {uploadedCas.holdingsCount} Holdings Found
                   </span>
-                  <span className="text-[10px] bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] px-2 py-0.5 rounded-full font-bold">
-                    PAN Masked: {uploadedCas.pan.substring(0, 5)}****{uploadedCas.pan.substring(9)}
-                  </span>
+                  <button
+                    onClick={() => setShowDebug(!showDebug)}
+                    className="text-[10px] bg-[#FAF8F5] border border-[#EDE9DF] text-[#64748B] hover:text-[#C57D25] px-2 py-0.5 rounded-full font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+                  >
+                    <Terminal className="w-2.5 h-2.5" />
+                    <span>{showDebug ? 'Hide' : 'Show'} Raw Text</span>
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-[#64748B] mt-2">
                 <div><span className="font-semibold text-[#0B1220]">Investor:</span> {uploadedCas.investorName}</div>
-                <div><span className="font-semibold text-[#0B1220]">Tokenized PAN:</span> {uploadedCas.pan.substring(0, 5)}****{uploadedCas.pan.substring(9)}</div>
-                <div><span className="font-semibold text-[#0B1220]">Holdings Parsed:</span> {uploadedCas.holdingsCount}</div>
+                <div><span className="font-semibold text-[#0B1220]">PAN:</span> {uploadedCas.pan.substring(0, 5)}****{uploadedCas.pan.substring(9)}</div>
+                <div><span className="font-semibold text-[#0B1220]">Holdings:</span> {uploadedCas.holdingsCount}</div>
                 <div><span className="font-semibold text-[#0B1220]">Total Assets:</span> ₹{uploadedCas.totalAssets.toLocaleString('en-IN')}</div>
               </div>
+              {showDebug && uploadedCas.rawExtractedText && (
+                <div className="mt-3 border-t border-[#EDE9DF] pt-3">
+                  <div className="text-[10px] font-bold text-[#8B93A7] uppercase tracking-wider mb-1">Raw Extracted Text (first 2000 chars):</div>
+                  <pre className="text-[9px] text-[#475569] font-mono bg-[#0B1220] text-[#C8E6C9] p-3 rounded-xl overflow-auto max-h-48 whitespace-pre-wrap leading-relaxed">
+                    {uploadedCas.rawExtractedText.substring(0, 2000)}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -173,6 +173,7 @@ export interface CasParseResult {
   holdingsCount: number;
   detectedBrokers: string[];
   parsedHoldings: HoldingItem[];
+  rawExtractedText?: string;
 }
 
 /** Onboarding walkthrough steps */

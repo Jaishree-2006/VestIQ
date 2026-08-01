@@ -228,7 +228,8 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
       totalAssets: parsed.totalAssets,
       holdingsCount: parsed.holdingsCount,
       detectedBrokers: parsed.detectedBrokers,
-      parsedHoldings: parsed.parsedHoldings
+      parsedHoldings: parsed.parsedHoldings,
+      rawExtractedText: parsed.rawExtractedText
     };
 
     setUploadedCas(casResult);
