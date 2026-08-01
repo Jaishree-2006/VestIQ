@@ -94,6 +94,26 @@ export interface AuditLogEntry {
   targetEntityName: string;
   reason?: string;
   ipAddress: string;
+  previousHash: string;
+  hash: string;
+}
+
+export interface DpdpConsentRecord {
+  consentId: string;
+  purpose: 'Portfolio Aggregation & Mis-Selling Audit';
+  lawBasis: 'India DPDP Act 2023 Section 6(1)';
+  status: 'Active' | 'Revoked';
+  grantedAt: string;
+  retentionDays: number;
+  autoPurgeAt: string;
+}
+
+export interface AccountAggregatorSession {
+  aaHandle: string;
+  fipName: string; // Financial Information Provider e.g. CDSL / NSDL / HDFC Bank
+  consentStatus: 'APPROVED' | 'PENDING' | 'EXPIRED';
+  sessionToken: string;
+  expiresAt: string;
 }
 
 export interface HoldingItem {

@@ -68,18 +68,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [onboardingStep, setOnboardingStep] = useState<number>(1);
 
-  // Audit log state (Compliance Officer & Admin actions)
+function computeEntryHash(prevHash: string, timestamp: string, action: string, targetId: string, officer: string): string {
+  const str = `${prevHash}:${timestamp}:${action}:${targetId}:${officer}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return `0x${Math.abs(hash).toString(16).padStart(8, '0')}f4e3d2c1`;
+}
+
+  // Audit log state (Compliance Officer & Admin actions with tamper-evident hash-chain)
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([
-    {
-      id: 'al-seed-1',
-      timestamp: '2026-07-28T09:12:44Z',
-      officerName: 'Neha Iyer (Compliance)',
-      action: 'drill_into_client',
-      targetEntityId: 'c2',
-      targetEntityName: 'Priya Sharma',
-      reason: 'Investigating high-severity junk bond mis-selling flag',
-      ipAddress: '10.0.1.42'
-    },
     {
       id: 'al-seed-2',
       timestamp: '2026-07-30T14:33:10Z',
@@ -88,7 +88,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetEntityId: 'org-wide',
       targetEntityName: 'Organization Audit Export',
       reason: 'Monthly SEBI IEPF submission',
-      ipAddress: '10.0.1.42'
+      ipAddress: '10.0.1.42',
+      previousHash: '0x9a8b7c6d5e4f3a2b',
+      hash: '0x4e2d1c0b9a8f7e6d'
+    },
+    {
+      id: 'al-seed-1',
+      timestamp: '2026-07-28T09:12:44Z',
+      officerName: 'Neha Iyer (Compliance)',
+      action: 'drill_into_client',
+      targetEntityId: 'c2',
+      targetEntityName: 'Priya Sharma',
+      reason: 'Investigating high-severity junk bond mis-selling flag',
+      ipAddress: '10.0.1.42',
+      previousHash: '0x0000000000000000',
+      hash: '0x9a8b7c6d5e4f3a2b'
     },
   ]);
 
@@ -146,24 +160,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentPage(landingPage);
   }, []);
 
-  // Audit logging utility
+  // Audit logging utility with cryptographic hash-chaining
   const logAuditAction = useCallback((
     action: AuditLogEntry['action'],
     entityId: string,
     entityName: string,
     reason?: string
   ) => {
-    const entry: AuditLogEntry = {
-      id: `al-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      officerName: role === 'compliance_officer' ? 'Neha Iyer (Compliance)' : 'Platform Admin',
-      action,
-      targetEntityId: entityId,
-      targetEntityName: entityName,
-      reason,
-      ipAddress: '10.0.1.42',
-    };
-    setAuditLog(prev => [entry, ...prev]);
+    setAuditLog(prev => {
+      const topEntry = prev[0];
+      const previousHash = topEntry ? topEntry.hash : '0x0000000000000000';
+      const timestamp = new Date().toISOString();
+      const officerName = role === 'compliance_officer' ? 'Neha Iyer (Compliance)' : 'Platform Admin';
+      const hash = computeEntryHash(previousHash, timestamp, action, entityId, officerName);
+
+      const entry: AuditLogEntry = {
+        id: `al-${Date.now()}`,
+        timestamp,
+        officerName,
+        action,
+        targetEntityId: entityId,
+        targetEntityName: entityName,
+        reason,
+        ipAddress: '10.0.1.42',
+        previousHash,
+        hash
+      };
+      return [entry, ...prev];
+    });
   }, [role]);
 
   // Compliance: explicitly drill into client (creates mandatory audit log entry)

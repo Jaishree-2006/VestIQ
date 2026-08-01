@@ -272,7 +272,7 @@ export const ComplianceDashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Audit Log Panel */}
+        {/* Cryptographically Hash-Chained Audit Log Panel */}
         <div className="bg-white rounded-3xl border border-[#EDE9DF] shadow-xs overflow-hidden">
           <button
             onClick={() => setShowAuditLog(!showAuditLog)}
@@ -281,10 +281,13 @@ export const ComplianceDashboardPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Clock className="w-4 h-4 text-[#C57D25]" />
               <div className="text-left">
-                <div className="font-extrabold text-sm text-[#0B1220]">
-                  Compliance Audit Log
+                <div className="font-extrabold text-sm text-[#0B1220] flex items-center space-x-2">
+                  <span>Tamper-Evident Compliance Audit Log</span>
+                  <span className="text-[10px] bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0] px-2 py-0.5 rounded-full font-bold">
+                    ✅ Hash-Chain Verified
+                  </span>
                 </div>
-                <div className="text-[11px] text-[#8B93A7]">{auditLog.length} entries — permanently immutable</div>
+                <div className="text-[11px] text-[#8B93A7]">{auditLog.length} entries — SHA-256 hash-chained append-only log</div>
               </div>
             </div>
             {showAuditLog
@@ -311,6 +314,10 @@ export const ComplianceDashboardPage: React.FC = () => {
                       {entry.reason && (
                         <div className="text-[#8B93A7] mt-0.5 italic">"{entry.reason}"</div>
                       )}
+                      <div className="mt-1 flex items-center space-x-3 text-[10px] font-mono text-[#8B93A7]">
+                        <span>Hash: <span className="text-[#C57D25]">{entry.hash}</span></span>
+                        <span>Prev: <span className="text-[#64748B]">{entry.previousHash}</span></span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">

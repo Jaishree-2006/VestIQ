@@ -9,12 +9,21 @@ if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
 export interface ParsedCasData {
   investorName: string;
   pan: string;
+  maskedPan: string;
   statementPeriod: string;
   totalAssets: number;
   holdingsCount: number;
   detectedBrokers: string[];
   parsedHoldings: HoldingItem[];
   redFlags: RedFlagAlert[];
+  parsingEngine: 'TIER_1_STRUCTURED_PDF' | 'TIER_2_OCR_FALLBACK';
+  detectedIssuerTemplate: 'NSDL_DIGITAL' | 'CDSL_DIGITAL' | 'CAMS_KFINTECH' | 'VESTIQ_STANDARD';
+}
+
+/** Utility to tokenize / mask PAN for privacy compliance under India DPDP Act 2023 */
+export function maskPan(pan: string): string {
+  if (!pan || pan.length < 10) return 'ABCDE****F';
+  return `${pan.substring(0, 5)}****${pan.substring(9)}`;
 }
 
 /**
@@ -49,6 +58,15 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 export function parseCasText(rawText: string, fileName: string): ParsedCasData {
   const text = rawText.replace(/\s+/g, ' ');
 
+  // Determine parsing engine & template issuer
+  const isImageOrScanned = rawText.trim().length < 50; // Empty text means scanned image PDF needing OCR
+  const parsingEngine: 'TIER_1_STRUCTURED_PDF' | 'TIER_2_OCR_FALLBACK' = isImageOrScanned ? 'TIER_2_OCR_FALLBACK' : 'TIER_1_STRUCTURED_PDF';
+
+  let detectedIssuerTemplate: 'NSDL_DIGITAL' | 'CDSL_DIGITAL' | 'CAMS_KFINTECH' | 'VESTIQ_STANDARD' = 'VESTIQ_STANDARD';
+  if (/NSDL/i.test(rawText)) detectedIssuerTemplate = 'NSDL_DIGITAL';
+  else if (/CDSL/i.test(rawText)) detectedIssuerTemplate = 'CDSL_DIGITAL';
+  else if (/CAMS|KFintech/i.test(rawText)) detectedIssuerTemplate = 'CAMS_KFINTECH';
+
   // Extract Metadata
   let investorName = 'Investor';
   const nameMatch = rawText.match(/Investor Name\s*:\s*([A-Za-z\s.]+)/i) || rawText.match(/Name\s*:\s*([A-Za-z\s.]+)/i);
@@ -58,6 +76,10 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
 
   let pan = 'ABCDE1234F';
   const panMatch = rawText.match(/PAN\s*:\s*([A-Z0-9]{10})/i) || rawText.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
+  if (panMatch) {
+    pan = panMatch[1] || panMatch[0];
+  }
+  const maskedPan = maskPan(pan);
   if (panMatch) {
     pan = panMatch[1] || panMatch[0];
   }
@@ -405,11 +427,14 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
   return {
     investorName,
     pan,
+    maskedPan,
     statementPeriod,
     totalAssets,
     holdingsCount: holdings.length,
     detectedBrokers,
     parsedHoldings: holdings,
-    redFlags
+    redFlags,
+    parsingEngine,
+    detectedIssuerTemplate
   };
 }
