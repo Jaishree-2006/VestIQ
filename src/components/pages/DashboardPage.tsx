@@ -54,16 +54,31 @@ export const DashboardPage: React.FC = () => {
                 <Upload className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-[#0B1220]">Upload CAS Statement</h4>
-                <p className="text-xs text-[#64748B]">Parse your NSDL/CDSL CAS PDF to import your real holdings instantly.</p>
+                <h4 className="font-bold text-sm text-[#0B1220]">Upload & Scan CAS Statement</h4>
+                <p className="text-xs text-[#64748B]">Parse your NSDL/CDSL CAS PDF (e.g. Priya Sharma CAS) to calculate real values & red flags instantly.</p>
               </div>
             </div>
-            <button
-              onClick={() => handleCasUpload('sample_cas.pdf')}
-              className="px-4 py-2 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
-            >
-              Parse Sample CAS PDF
-            </button>
+            <div className="flex items-center space-x-2 shrink-0">
+              <label className="px-4 py-2 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1.5">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload PDF</span>
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) await handleCasUpload(f);
+                  }}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={() => handleCasUpload('sample_cas.pdf')}
+                className="px-3.5 py-2 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#0B1220] rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Priya Sharma Sample
+              </button>
+            </div>
           </div>
         )}
 
@@ -71,10 +86,10 @@ export const DashboardPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[#8B93A7] mb-1">
-              total portfolio value
+              total portfolio value {uploadedCas && <span className="text-[#C57D25]">({uploadedCas.investorName})</span>}
             </div>
             <div className="text-4xl sm:text-5xl font-extrabold font-mono-num text-[#0B1220] tracking-tight">
-              ₹18,42,600
+              ₹{totalValue.toLocaleString('en-IN')}
             </div>
           </div>
 
@@ -99,27 +114,33 @@ export const DashboardPage: React.FC = () => {
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
             <div className="text-xs font-medium text-[#8B93A7] mb-1">equities</div>
             <div className="text-2xl font-bold font-mono-num text-[#0B1220]">
-              ₹8,20,000
+              ₹{totalEquities.toLocaleString('en-IN')}
             </div>
-            <div className="text-[11px] text-[#64748B] mt-1 font-medium">44.5% of portfolio</div>
+            <div className="text-[11px] text-[#64748B] mt-1 font-medium">
+              {totalValue > 0 ? ((totalEquities / totalValue) * 100).toFixed(1) : 0}% of portfolio
+            </div>
           </div>
 
           {/* Bonds Card */}
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
             <div className="text-xs font-medium text-[#8B93A7] mb-1">bonds</div>
             <div className="text-2xl font-bold font-mono-num text-[#0B1220]">
-              ₹3,10,000
+              ₹{totalBonds.toLocaleString('en-IN')}
             </div>
-            <div className="text-[11px] text-[#64748B] mt-1 font-medium">16.8% of portfolio</div>
+            <div className="text-[11px] text-[#64748B] mt-1 font-medium">
+              {totalValue > 0 ? ((totalBonds / totalValue) * 100).toFixed(1) : 0}% of portfolio
+            </div>
           </div>
 
           {/* REITs / InvITs Card */}
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
             <div className="text-xs font-medium text-[#8B93A7] mb-1">REITs / InvITs</div>
             <div className="text-2xl font-bold font-mono-num text-[#0B1220]">
-              ₹7,12,600
+              ₹{totalReits.toLocaleString('en-IN')}
             </div>
-            <div className="text-[11px] text-[#64748B] mt-1 font-medium">38.7% of portfolio</div>
+            <div className="text-[11px] text-[#64748B] mt-1 font-medium">
+              {totalValue > 0 ? ((totalReits / totalValue) * 100).toFixed(1) : 0}% of portfolio
+            </div>
           </div>
 
         </div>

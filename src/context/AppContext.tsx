@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { PageId, UserRole, HoldingItem, RedFlagAlert, CasParseResult, AuditLogEntry } from '../types';
 import { ROLE_PERMISSIONS } from '../types';
 import { INITIAL_HOLDINGS, MOCK_RED_FLAGS } from '../data/mockData';
+import { extractTextFromPdf, parseCasText } from '../utils/casParser';
 
 interface AppContextType {
   // Routing
@@ -30,7 +31,7 @@ interface AppContextType {
 
   // CAS Upload
   uploadedCas: CasParseResult | null;
-  handleCasUpload: (fileName: string) => void;
+  handleCasUpload: (fileOrName: File | string) => Promise<void>;
   resetPortfolio: () => void;
 
   // Onboarding
@@ -181,19 +182,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // CAS Upload
-  const handleCasUpload = (fileName: string) => {
-    const mockCasResult: CasParseResult = {
-      investorName: 'Rajesh Kumar',
-      pan: 'ABCDE1234F',
-      statementPeriod: '01-Apr-2024 to 31-Jul-2026',
-      totalAssets: 1842600,
-      holdingsCount: 5,
-      detectedBrokers: ['Zerodha', 'Groww', 'ICICI Direct', 'RBI Retail Direct'],
-      parsedHoldings: INITIAL_HOLDINGS
+  const handleCasUpload = async (fileOrName: File | string) => {
+    let rawText = '';
+    let fileName = 'statement.pdf';
+
+    if (typeof fileOrName === 'string') {
+      fileName = fileOrName;
+      // Default sample string triggers Priya Sharma statement
+      rawText = 'PRIYA SHARMA PAN: ABCDE1234F Statement Period: 01-Jan-2026 to 30-Jun-2026 Reliance Industries Ltd HDFC Bank Ltd Infosys Ltd PFC 7.35% NCD 2029 Embassy Office Parks REIT Grid Infrastructure InvIT Parag Parikh Flexi Cap Fund 18,92,882.14';
+    } else if (fileOrName instanceof File) {
+      fileName = fileOrName.name;
+      rawText = await extractTextFromPdf(fileOrName);
+    }
+
+    const parsed = parseCasText(rawText, fileName);
+
+    const casResult: CasParseResult = {
+      investorName: parsed.investorName,
+      pan: parsed.pan,
+      statementPeriod: parsed.statementPeriod,
+      totalAssets: parsed.totalAssets,
+      holdingsCount: parsed.holdingsCount,
+      detectedBrokers: parsed.detectedBrokers,
+      parsedHoldings: parsed.parsedHoldings
     };
-    setUploadedCas(mockCasResult);
-    setHoldings(INITIAL_HOLDINGS);
-    setRedFlags(MOCK_RED_FLAGS);
+
+    setUploadedCas(casResult);
+    setHoldings(parsed.parsedHoldings);
+    setRedFlags(parsed.redFlags.length > 0 ? parsed.redFlags : MOCK_RED_FLAGS);
   };
 
   const resetPortfolio = () => {

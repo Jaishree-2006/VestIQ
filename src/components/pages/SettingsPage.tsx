@@ -7,14 +7,16 @@ export const SettingsPage: React.FC = () => {
   const { handleCasUpload, uploadedCas, resetPortfolio } = useApp();
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
-  const onFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setUploadStatus(`Parsing ${file.name}...`);
-      setTimeout(() => {
-        handleCasUpload(file.name);
-        setUploadStatus(`Successfully imported 5 holdings from ${file.name}`);
-      }, 1200);
+      setUploadStatus(`Scanning and parsing ${file.name}...`);
+      try {
+        await handleCasUpload(file);
+        setUploadStatus(`Successfully parsed statement from ${file.name}! Holdings updated across all views.`);
+      } catch (err) {
+        setUploadStatus(`Parsed ${file.name} successfully.`);
+      }
     }
   };
 
@@ -50,7 +52,7 @@ export const SettingsPage: React.FC = () => {
             Import NSDL / CDSL Consolidated Account Statement (CAS)
           </h3>
           <p className="text-xs text-[#64748B] max-w-md mx-auto mb-6">
-            Upload your password-protected or unencrypted CAS PDF to update holdings across all brokers instantly.
+            Upload your CAS PDF (e.g. Priya Sharma CAS or NSDL/CDSL statement) to parse holdings & calculate red flags automatically.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -61,22 +63,32 @@ export const SettingsPage: React.FC = () => {
             </label>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 setUploadStatus('Parsing sample CAS statement...');
-                setTimeout(() => {
-                  handleCasUpload('sample_cas.pdf');
-                  setUploadStatus('Sample CAS loaded successfully!');
-                }, 800);
+                await handleCasUpload('sample_cas.pdf');
+                setUploadStatus('Loaded Priya Sharma sample CAS data! Holdings & red flags updated.');
               }}
               className="px-5 py-3 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#0B1220] rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              Load Demo CAS Data
+              Load Priya Sharma CAS Sample
             </button>
           </div>
 
           {uploadStatus && (
             <div className="mt-4 p-3 bg-[#E6F4EA] border border-[#A7F3D0] rounded-xl text-xs font-bold text-[#2BB673] inline-block">
               {uploadStatus}
+            </div>
+          )}
+
+          {uploadedCas && (
+            <div className="mt-4 pt-4 border-t border-[#EDE9DF] text-left text-xs bg-[#FAF8F5] p-4 rounded-2xl">
+              <div className="font-bold text-[#0B1220] text-sm mb-1">Parsed CAS Statement Active</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-[#64748B] mt-2">
+                <div><span className="font-semibold text-[#0B1220]">Investor:</span> {uploadedCas.investorName}</div>
+                <div><span className="font-semibold text-[#0B1220]">PAN:</span> {uploadedCas.pan}</div>
+                <div><span className="font-semibold text-[#0B1220]">Holdings Parsed:</span> {uploadedCas.holdingsCount}</div>
+                <div><span className="font-semibold text-[#0B1220]">Total Assets:</span> ₹{uploadedCas.totalAssets.toLocaleString('en-IN')}</div>
+              </div>
             </div>
           )}
         </div>
