@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-/* Direct webfont definitions for Google Sans to guarantee rendering across all browsers */
+/* ============================================================
+   VestIQ Design System — Global Styles
+   ============================================================ */
+
+/* Google Sans via @font-face (no @import url needed — loaded in index.html) */
 @font-face {
   font-family: 'Google Sans';
   font-style: normal;
@@ -22,7 +26,6 @@
   font-display: swap;
   src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3KwiIMKg.woff2') format('woff2');
 }
-
 @font-face {
   font-family: 'Google Sans Text';
   font-style: normal;
@@ -38,6 +41,7 @@
   src: url('https://fonts.gstatic.com/s/googlesanstext/v21/5aUu9-D82nhh56KU0SfdMPKJ7w9TwA.woff2') format('woff2');
 }
 
+/* ---- CSS Custom Properties ---- */
 :root {
   --bg-page: #FAF8F5;
   --bg-surface: #FFFFFF;
@@ -52,108 +56,102 @@
   --color-emerald-bg: #E6F4EA;
 }
 
-body {
+/* ---- Global Reset + Base ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg-page);
+  min-height: 100%;
+}
+
+body {
+  background-color: #FAF8F5;
   background-image: url('/doodle-pattern.svg');
   background-size: 500px 375px;
   background-repeat: repeat;
   background-position: top left;
   background-attachment: fixed;
-  color: var(--color-ink);
-  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
+  color: #0B1220;
+  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6, nav, button, input, select, textarea, table, th, td {
-  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
+  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
 }
 
-.font-mono-num {
-  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
-  font-feature-settings: "tnum" 1;
+/* ---- App Root ---- */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Enforce MINIMUM font size of 14px across the entire app */
-.text-xs {
-  font-size: 14px !important;
-  line-height: 1.45 !important;
-}
+/* ---- Custom Scrollbars ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F1EFE9; }
+::-webkit-scrollbar-thumb { background: #D4CEBF; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #B5AD9A; }
 
-/* Custom scrollbars for clean light UI */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #F1EFE9;
-}
-::-webkit-scrollbar-thumb {
-  background: #D4CEBF;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #B5AD9A;
-}
-
-/* Ensure doodle background is visible under page containers */
-.min-h-screen {
-  background-color: transparent !important;
-  background-image: url('/doodle-pattern.svg');
-  background-size: 500px 375px;
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-position: top left;
-}
-
-/* Sidebar must always have a clean solid background — no doodles */
+/* ---- Sidebar — always solid background, never doodle ---- */
 aside {
   background-image: none !important;
   background-color: #F7F5EE !important;
   background-attachment: initial !important;
 }
 
+/* ---- Shadows ---- */
 .shadow-vestiq {
   box-shadow: 0 4px 20px -2px rgba(11, 18, 32, 0.05), 0 2px 6px -1px rgba(11, 18, 32, 0.03);
 }
-
 .shadow-vestiq-lg {
   box-shadow: 0 12px 32px -4px rgba(197, 125, 37, 0.08), 0 4px 12px -2px rgba(11, 18, 32, 0.04);
 }
 
-/* 3D Flip Card Utilities */
-.perspective-1000 {
-  perspective: 1000px;
-}
-.card-flip-inner {
-  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-}
-.perspective-1000:hover .card-flip-inner,
-.card-flip-inner.is-flipped {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-}
-.card-flip-front,
-.card-flip-back {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.card-flip-back {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
+/* ---- Font mono num ---- */
+.font-mono-num {
+  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
 }
 
+/* ---- 3D Flip Card Utilities ---- */
+.flip-card-container {
+  perspective: 1000px;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card-container:hover .flip-card-inner,
+.flip-card-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 1rem;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* ---- Spinner animation ---- */
 @keyframes spinSlow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.animate-spin-slow {
-  animation: spinSlow 8s linear infinite;
+.spin-slow {
+  animation: spinSlow 4s linear infinite;
 }
-
-

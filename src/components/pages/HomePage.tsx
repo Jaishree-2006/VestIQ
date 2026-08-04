@@ -161,14 +161,15 @@ export const HomePage: React.FC = () => {
             
             {/* Card 1: Scattered Portfolios */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
+              className="flip-card-container min-h-[320px] w-full cursor-pointer"
+              style={{minHeight: '320px'}}
               onClick={() => toggleCard(1)}
             >
-              <div className={`relative w-full h-full card-flip-inner ${flippedCards[1] ? 'is-flipped' : ''}`}>
+              <div className={`flip-card-inner ${flippedCards[1] ? 'flipped' : ''}`} style={{minHeight: '320px'}}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="flip-card-face bg-[#FAF8F5] p-6 border border-[#EDE9DF] flex flex-col justify-between shadow-xs">
                   <div>
-                    <div className="w-10 h-10 rounded-lg bg-[#FDF2F2] text-[#EF4444] flex items-center justify-center mb-4 border border-[#FCA5A5]/30">
+                    <div className="w-10 h-10 rounded-lg bg-[#FDF2F2] text-[#EF4444] flex items-center justify-center mb-4 border border-[#FCA5A5]" style={{borderRadius: '8px'}}>
                       <XCircle className="w-5 h-5" />
                     </div>
                     <h3 className="text-lg font-bold text-[#0B1220] mb-2">Scattered Portfolios</h3>
@@ -176,16 +177,16 @@ export const HomePage: React.FC = () => {
                       Your holdings are fragmented across Zerodha, Groww, ICICI Direct, and RBI Retail Direct. You lack a unified view of real exposure.
                     </p>
                   </div>
-                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
-                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
-                    <span>Hover or tap to flip for description</span>
+                  <div className="pt-4 border-t border-[#EDE9DF] flex items-center gap-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 spin-slow" />
+                    <span>Hover or tap to flip</span>
                   </div>
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
+                <div className="flip-card-face flip-card-back bg-[#0B1220] text-white p-6 border border-[#1E293B] flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center space-x-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
                       <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
                     </div>
@@ -193,12 +194,12 @@ export const HomePage: React.FC = () => {
                     <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
                       Auto-ingests NSDL & CDSL Statements with 100% client-side privacy. Standardizes equities, MFs, bonds, and REITs into one real-time exposure dashboard.
                     </p>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>Zero manual data entry</span>
                       </div>
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>Single-click PAN Tokenization</span>
                       </div>
@@ -206,7 +207,8 @@ export const HomePage: React.FC = () => {
                   </div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setCurrentPage('dashboard'); }}
-                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    style={{backgroundColor: '#C57D25'}}
                   >
                     <span>Try CAS Auto-Scanner</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -217,14 +219,15 @@ export const HomePage: React.FC = () => {
 
             {/* Card 2: Opaque Instruments */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
+              className="flip-card-container min-h-[320px] w-full cursor-pointer"
+              style={{minHeight: '320px'}}
               onClick={() => toggleCard(2)}
             >
-              <div className={`relative w-full h-full card-flip-inner ${flippedCards[2] ? 'is-flipped' : ''}`}>
+              <div className={`flip-card-inner ${flippedCards[2] ? 'flipped' : ''}`} style={{minHeight: '320px'}}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="flip-card-face bg-[#FAF8F5] p-6 border border-[#EDE9DF] flex flex-col justify-between shadow-xs">
                   <div>
-                    <div className="w-10 h-10 rounded-lg bg-[#FFF8EE] text-[#C57D25] flex items-center justify-center mb-4 border border-[#F7E5C8]">
+                    <div className="w-10 h-10 rounded-lg bg-[#FFF8EE] text-[#C57D25] flex items-center justify-center mb-4 border border-[#F7E5C8]" style={{borderRadius: '8px'}}>
                       <FileText className="w-5 h-5" />
                     </div>
                     <h3 className="text-lg font-bold text-[#0B1220] mb-2">Opaque Instruments</h3>
@@ -232,16 +235,16 @@ export const HomePage: React.FC = () => {
                       REITs, InvITs, and structured corporate bonds are sold without plain-English disclosure of lock-in terms or interest rate vulnerability.
                     </p>
                   </div>
-                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
-                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
-                    <span>Hover or tap to flip for description</span>
+                  <div className="pt-4 border-t border-[#EDE9DF] flex items-center gap-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 spin-slow" />
+                    <span>Hover or tap to flip</span>
                   </div>
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
+                <div className="flip-card-face flip-card-back bg-[#0B1220] text-white p-6 border border-[#1E293B] flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center space-x-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
                       <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
                     </div>
@@ -249,12 +252,12 @@ export const HomePage: React.FC = () => {
                     <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
                       Translates complex debt covenants, YTM shifts, and commercial real estate vacancy rates into straightforward human explanations.
                     </p>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>Flags hidden lock-in periods</span>
                       </div>
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>Detects mis-sold commission products</span>
                       </div>
@@ -262,7 +265,8 @@ export const HomePage: React.FC = () => {
                   </div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setCurrentPage('red-flags'); }}
-                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    className="w-full mt-4 py-2 px-3 rounded-lg text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    style={{backgroundColor: '#C57D25'}}
                   >
                     <span>Open Red Flag Detector</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -273,14 +277,15 @@ export const HomePage: React.FC = () => {
 
             {/* Card 3: Abstract Risk Scores */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
+              className="flip-card-container min-h-[320px] w-full cursor-pointer"
+              style={{minHeight: '320px'}}
               onClick={() => toggleCard(3)}
             >
-              <div className={`relative w-full h-full card-flip-inner ${flippedCards[3] ? 'is-flipped' : ''}`}>
+              <div className={`flip-card-inner ${flippedCards[3] ? 'flipped' : ''}`} style={{minHeight: '320px'}}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="flip-card-face bg-[#FAF8F5] p-6 border border-[#EDE9DF] flex flex-col justify-between shadow-xs">
                   <div>
-                    <div className="w-10 h-10 rounded-lg bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4 border border-[#A7F3D0]">
+                    <div className="w-10 h-10 rounded-lg bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4 border border-[#A7F3D0]" style={{borderRadius: '8px'}}>
                       <Zap className="w-5 h-5" />
                     </div>
                     <h3 className="text-lg font-bold text-[#0B1220] mb-2">Abstract Risk Scores</h3>
@@ -288,16 +293,16 @@ export const HomePage: React.FC = () => {
                       A bare risk score of "6.5/10" gives zero actionable insight into why your portfolio drops when macro rates move.
                     </p>
                   </div>
-                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
-                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
-                    <span>Hover or tap to flip for description</span>
+                  <div className="pt-4 border-t border-[#EDE9DF] flex items-center gap-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 spin-slow" />
+                    <span>Hover or tap to flip</span>
                   </div>
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
+                <div className="flip-card-face flip-card-back bg-[#0B1220] text-white p-6 border border-[#1E293B] flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center space-x-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
                       <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
                     </div>
@@ -305,12 +310,12 @@ export const HomePage: React.FC = () => {
                     <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
                       Simulates exact macroeconomic events like +100bps RBI rate hikes, crude price surges, or sector crashes to reveal exact ₹ impacts on your wealth.
                     </p>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>What-if rate hike scenario sandbox</span>
                       </div>
-                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                      <div className="flex items-center gap-2 text-xs text-[#E2E8F0]">
                         <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
                         <span>Peer-group risk benchmarking</span>
                       </div>
@@ -318,7 +323,8 @@ export const HomePage: React.FC = () => {
                   </div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setCurrentPage('shock-sandbox'); }}
-                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    className="w-full mt-4 py-2 px-3 rounded-lg text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    style={{backgroundColor: '#C57D25'}}
                   >
                     <span>Launch Shock Sandbox</span>
                     <ArrowRight className="w-3.5 h-3.5" />
