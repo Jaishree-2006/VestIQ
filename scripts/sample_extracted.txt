@@ -1,0 +1,86 @@
+CONSOLIDATED ACCOUNT STATEMENT
+(Sample statement generated for VestIQ MVP testing purposes only)
+Statement Period
+01-Jan-2026 to 30-Jun-2026
+PAN
+ABCDE1234F
+Investor Name
+PRIYA SHARMA
+CAS ID
+CAS/2026/0417832
+Address
+Flat 12B, Lake View Apartments, Bengaluru - 560068
+Email
+p.sharma@example.com
+Equity Holdings (Demat)
+ISIN
+Security Name
+Broker / DP
+Qty
+Avg Cost (Rs)
+INE002A01018
+INE040A01034
+INE009A01021
+Reliance Industries Ltd
+HDFC Bank Ltd
+Infosys Ltd
+Bond / Debenture Holdings
+Zerodha
+ICICI Direct
+Zerodha
+120
+200
+150
+2,410.00
+1,540.00
+1,290.00
+Current Value (Rs)
+3,08,400.00
+3,26,000.00
+1,85,600.00
+ISIN
+Security Name
+Broker / DP
+Qty Face Value (Rs)
+Current Value (Rs)
+INE134E08LL9
+PFC 7.35% NCD 2029
+REIT / InvIT Holdings
+ICICI Direct
+300
+1,000.00
+3,10,000.00
+ISIN
+Security Name
+Broker / DP
+Units
+Purchase NAV (Rs) Current Value (Rs)
+Lock-in / Liquidity Terms
+INE0FDU25012
+INE04VU25011
+Embassy Office Parks REIT Zerodha
+Grid Infrastructure InvIT
+800
+Relationship Manager - ICICI
+4,400
+Mutual Fund Folios (via CAMS/KFintech)
+340.00
+100.00
+2,72,000.00
+4,40,600.00
+Listed, freely tradable
+3-year lock-in from allotment date (allotted 14-Aug-2025); early exit subject to secondary market liquidity, historically thin volume
+Folio No.
+Scheme Name
+AMC
+Units
+NAV (Rs) Current Value (Rs)
+11029384756
+Parag Parikh Flexi Cap Fund - Direct GrowthPPFAS MF
+Total Portfolio Value as on 30-Jun-2026: Rs 18,92,882.14
+612.45
+82.10
+50,282.14
+Disclaimer: This is a synthetically generated sample statement created solely for testing the VestIQ portfolio parser during development. It
+does not represent any real investor, brokerage, depository, or financial instrument, and should not be used for any purpose other than
+software testing

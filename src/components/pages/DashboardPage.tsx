@@ -83,7 +83,7 @@ export const DashboardPage: React.FC = () => {
         )}
 
         {/* Top Portfolio Header matching Image 2 EXACTLY */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[#8B93A7] mb-1">
               total portfolio value {uploadedCas && <span className="text-[#C57D25]">({uploadedCas.investorName})</span>}
@@ -106,6 +106,43 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {uploadedCas && (
+          <div className="mb-8 bg-white rounded-2xl border border-[#EDE9DF] p-5 shadow-xs">
+            <div className="grid gap-3 sm:grid-cols-3 text-xs text-[#64748B]">
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">Investor</div>
+                <div>{uploadedCas.investorName}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">Statement Period</div>
+                <div>{uploadedCas.statementPeriod}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">Total Assets</div>
+                <div>₹{uploadedCas.totalAssets.toLocaleString('en-IN')}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">Holdings Count</div>
+                <div>{uploadedCas.holdingsCount}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">Detected Brokers</div>
+                <div>{uploadedCas.detectedBrokers.join(', ') || 'Unknown'}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-[#0B1220] text-sm">PAN (masked)</div>
+                <div>{uploadedCas.pan.substring(0, 5)}****{uploadedCas.pan.substring(9)}</div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-[#EDE9DF] text-xs text-[#475569]">
+              <div className="font-semibold mb-2 text-[#0B1220]">Raw Extracted Text Preview</div>
+              <div className="max-h-48 overflow-y-auto rounded-xl bg-[#F8FAFC] border border-[#EDE9DF] p-3 font-mono text-[11px] whitespace-pre-wrap">
+                {uploadedCas.rawExtractedText || 'No raw text available.'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 3 Asset Class Summary Boxes matching Image 2 EXACTLY */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

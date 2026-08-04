@@ -94,6 +94,16 @@ export const ComplianceDashboardPage: React.FC = () => {
           </div>
         </div>
 
+        <div className="mb-6 bg-[#F8FAFC] border border-[#EDE9DF] rounded-2xl p-4">
+          <div className="text-xs font-bold text-[#0B1220] mb-2">Production Control Layer</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-[#64748B] leading-relaxed">
+            <div>• TLS in transit, AES-256 at rest, and KMS-managed keys for stored documents and parsed data.</div>
+            <div>• PANs, account numbers, and other identifiers are masked or tokenized in storage and logs.</div>
+            <div>• Role-based access ensures only approved brokers, RMs, or compliance officers can query specific client cases.</div>
+            <div>• Retention and deletion workflows support DPDP readiness and prevent indefinite storage of raw CAS files.</div>
+          </div>
+        </div>
+
         {auditExported && (
           <div className="mb-6 bg-[#E6F4EA] border border-[#A7F3D0] rounded-2xl p-4 flex items-center justify-between text-xs font-semibold text-[#15803D]">
             <div className="flex items-center space-x-2">

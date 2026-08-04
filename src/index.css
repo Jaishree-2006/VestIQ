@@ -1,5 +1,5 @@
-/* Google Sans, Google Sans Text, Inter & JetBrains Mono Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* Google Sans & Google Sans Text Fonts EXCLUSIVELY */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 /* Direct webfont definitions for Google Sans to guarantee rendering across all browsers */
@@ -58,19 +58,33 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-page);
+  background-image: url('/doodle-pattern.svg');
+  background-size: 500px 375px;
+  background-repeat: repeat;
+  background-position: top left;
+  background-attachment: fixed;
   color: var(--color-ink);
-  font-family: 'Google Sans', 'Google Sans Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6, nav, button {
-  font-family: 'Google Sans', 'Inter', sans-serif;
+h1, h2, h3, h4, h5, h6, nav, button, input, select, textarea, table, th, td {
+  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
 }
 
 .font-mono-num {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Google Sans', 'Google Sans Text', sans-serif;
   font-feature-settings: "tnum" 1;
+}
+
+/* Enforce MINIMUM font size of 14px across the entire app */
+.text-\[10px\],
+.text-\[11px\],
+.text-xs {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
 }
 
 /* Custom scrollbars for clean light UI */
@@ -89,7 +103,23 @@ h1, h2, h3, h4, h5, h6, nav, button {
   background: #B5AD9A;
 }
 
-/* Soft shadows for light mode */
+/* Ensure doodle background is visible under page containers */
+.min-h-screen {
+  background-color: transparent !important;
+  background-image: url('/doodle-pattern.svg');
+  background-size: 500px 375px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-position: top left;
+}
+
+/* Sidebar must always have a clean solid background — no doodles */
+aside {
+  background-image: none !important;
+  background-color: #F7F5EE !important;
+  background-attachment: initial !important;
+}
+
 .shadow-vestiq {
   box-shadow: 0 4px 20px -2px rgba(11, 18, 32, 0.05), 0 2px 6px -1px rgba(11, 18, 32, 0.03);
 }

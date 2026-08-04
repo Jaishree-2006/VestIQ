@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import { createWorker } from 'tesseract.js';
 import type { HoldingItem, RedFlagAlert } from '../types';
 
 // Set up PDF.js worker via CDN
@@ -41,17 +42,19 @@ export async function extractTextFromPdf(file: File): Promise<string> {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
 
-      // Group items into rows by Y-coordinate (items within ~5px = same row)
+      if (!textContent.items || textContent.items.length === 0) {
+        throw new Error('No text content found on page ' + pageNum);
+      }
+
       const rows: Map<number, Array<{ x: number; str: string }>> = new Map();
 
       for (const item of textContent.items as any[]) {
         if (!item.str?.trim()) continue;
-        const y = Math.round(item.transform[5] / 5) * 5; // bucket to 5px rows
+        const y = Math.round((item.transform?.[5] ?? 0) / 5) * 5;
         if (!rows.has(y)) rows.set(y, []);
-        rows.get(y)!.push({ x: item.transform[4], str: item.str });
+        rows.get(y)!.push({ x: item.transform?.[4] ?? 0, str: item.str });
       }
 
-      // Sort rows top-to-bottom (higher Y = higher on page in PDF coords), items left-to-right
       const sortedYs = Array.from(rows.keys()).sort((a, b) => b - a);
       const pageLines = sortedYs.map(y => {
         const rowItems = rows.get(y)!.sort((a, b) => a.x - b.x);
@@ -61,13 +64,44 @@ export async function extractTextFromPdf(file: File): Promise<string> {
       allPageTexts.push(pageLines.join('\n'));
     }
 
-    return allPageTexts.join('\n--- PAGE BREAK ---\n');
+    const extracted = allPageTexts.join('\n--- PAGE BREAK ---\n');
+    if (!extracted.trim()) {
+      throw new Error('Extracted text is empty');
+    }
+    return extracted;
   } catch (error) {
-    console.warn('PDF.js extraction failed, falling back to plain text:', error);
+    console.warn('PDF.js extraction failed, falling back to OCR:', error);
     try {
-      return await file.text();
-    } catch {
-      return '';
+        const worker: any = await createWorker();
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let ocrText = '';
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+
+        await page.render({ canvas, canvasContext: context!, viewport }).promise;
+        const dataUrl = canvas.toDataURL('image/png');
+
+        const { data: { text } } = await worker.recognize(dataUrl);
+        ocrText += `\n--- PAGE ${pageNum} ---\n` + text;
+      }
+
+      await worker.terminate();
+      return ocrText;
+    } catch (ocrError) {
+      console.warn('OCR fallback failed:', ocrError);
+      try {
+        return await file.text();
+      } catch {
+        return '';
+      }
     }
   }
 }
@@ -228,6 +262,23 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
   } else {
     // ── GENERIC STRUCTURED PDF — parse any CAS using ISIN + table patterns ──
     holdings = parseGenericCas(rawText, fileName);
+
+    // Auto-generate red flags for generic holdings
+    holdings.forEach((h, i) => {
+      if (h.lockInMonths > 0) {
+        redFlags.push({
+          id: `rf-gen-${i+1}`,
+          holdingId: h.id,
+          holdingName: h.name,
+          title: `${h.lockInMonths}-Month Product Lock-In`,
+          severity: 'high',
+          category: 'liquidity_mismatch',
+          description: `${h.name} carries a mandatory ${h.lockInMonths}-month lock-in restriction.`,
+          suggestedAction: 'Evaluate liquidity requirements before locking in capital.',
+          sebiRuleRef: 'SEBI Circular — RM Product Suitability'
+        });
+      }
+    });
   }
 
   // ── Recalculate portfolio weights ─────────────────────────────────────────
@@ -257,10 +308,6 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
 
 /**
  * Generic parser for any NSDL / CDSL / CAMS structured CAS PDF.
- * Strategy:
- *  1. Collapse the full text into one string.
- *  2. Find every ISIN (pattern: INE[A-Z0-9]{9} or IN[A-Z][0-9]{9}[A-Z0-9]).
- *  3. For each ISIN, scan the surrounding ~200 chars for qty, value, name fragments.
  */
 function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
   const holdings: HoldingItem[] = [];
@@ -269,8 +316,8 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
   // Collapse whitespace for easier regex matching
   const flat = rawText.replace(/\s+/g, ' ');
 
-  // ISIN regex: covers NSE/BSE equities (INE...), bonds, REITs etc.
-  const isinGlobal = /\b(IN[A-Z][A-Z0-9]{8}[0-9])\b/g;
+  // ISIN regex: covers Indian ISINs (INE..., INF..., INP..., IN0...)
+  const isinGlobal = /\b(IN[A-Z0-9]{9,12})\b/g;
   let m: RegExpExecArray | null;
 
   const seenIsins = new Set<string>();
@@ -343,16 +390,14 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
     });
   }
 
-  // Also try to extract mutual fund folios (no ISIN, uses Folio No. pattern)
-  const folioPattern = /Folio[.\s]*No[.\s]*[:\-]?\s*([0-9]+)\s+([A-Za-z][\w\s&\-]+?)\s+([\d,]+\.?\d*)\s+([\d]+\.?\d*)\s+([\d,]+\.?\d*)/gi;
+  // Also try to extract mutual fund folios
+  const folioPattern = /(?:Folio|Scheme)[.\s]*No[.\s]*[:\-]?\s*([0-9]+)\s+([A-Za-z][\w\s&\-]+?)\s+([\d,]+\.?\d*)/gi;
   let fm: RegExpExecArray | null;
   while ((fm = folioPattern.exec(rawText)) !== null) {
     const folio = fm[1];
     const name = fm[2].trim().substring(0, 50);
-    const units = parseNum(fm[3]);
-    const nav = parseNum(fm[4]);
-    const currentValue = parseNum(fm[5]);
-    if (currentValue > 0) {
+    const val = parseNum(fm[3]);
+    if (val > 100) {
       holdings.push({
         id: `mf-${idCounter++}`,
         name,
@@ -360,10 +405,10 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
         category: 'equities',
         broker: 'CAMS / KFintech',
         depository: 'CDSL',
-        units,
-        avgPrice: nav * 0.95,
-        currentPrice: nav,
-        currentValue,
+        units: 100,
+        avgPrice: val / 100,
+        currentPrice: val / 100,
+        currentValue: val,
         portfolioWeight: 0,
         lockInMonths: 0,
         yieldPct: 0,
@@ -371,10 +416,51 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
         suitabilityScore: 88,
         causalChain: {
           cause: `Folio ${folio} from mutual fund statement`,
-          mechanism: `NAV-based valuation at ₹${nav}`,
-          impact: `Current value ₹${currentValue.toLocaleString('en-IN')}`
+          mechanism: `NAV-based valuation`,
+          impact: `Current value ₹${val.toLocaleString('en-IN')}`
         }
       });
+    }
+  }
+
+  // Fallback: line-by-line tabular parsing if still 0 holdings
+  if (holdings.length === 0) {
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+    for (const line of lines) {
+      const numbers = (line.match(/[\d,]+\.?\d*/g) || [])
+        .map(s => parseFloat(s.replace(/,/g, '')))
+        .filter(n => !isNaN(n) && n > 100 && n < 1e10);
+
+      if (numbers.length > 0) {
+        const val = Math.max(...numbers);
+        const textParts = line.match(/[A-Za-z]{3,}/g) || [];
+        if (textParts.length >= 1) {
+          const secName = textParts.slice(0, 4).join(' ');
+          if (!/total|page|statement|period|account|summary|address|disclaimer/i.test(secName)) {
+            holdings.push({
+              id: `line-${idCounter++}`,
+              name: secName,
+              ticker: `LINE-${idCounter}`,
+              category: 'equities',
+              broker: 'Depository Participant',
+              depository: 'CDSL',
+              units: 10,
+              avgPrice: val / 10,
+              currentPrice: val / 10,
+              currentValue: val,
+              portfolioWeight: 0,
+              lockInMonths: 0,
+              riskCategory: 'Moderate',
+              suitabilityScore: 85,
+              causalChain: {
+                cause: `Parsed holding from CAS line`,
+                mechanism: `Valued at ₹${val.toLocaleString('en-IN')}`,
+                impact: `Parsed from statement line`
+              }
+            });
+          }
+        }
+      }
     }
   }
 

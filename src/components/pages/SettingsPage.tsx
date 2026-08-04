@@ -6,18 +6,45 @@ import { Settings, Upload, Trash2, Download, ShieldCheck, Terminal } from 'lucid
 export const SettingsPage: React.FC = () => {
   const { handleCasUpload, uploadedCas, resetPortfolio } = useApp();
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [showDebug, setShowDebug] = useState(false);
 
   const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setUploadStatus(`Scanning and parsing ${file.name}...`);
-      try {
-        await handleCasUpload(file);
-        setUploadStatus(`Successfully parsed statement from ${file.name}! Holdings updated across all views.`);
-      } catch (err) {
-        setUploadStatus(`Parsed ${file.name} successfully.`);
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError(null);
+    setUploadStatus(`Starting parsing for ${file.name}...`);
+
+    try {
+      const result = await handleCasUpload(file, {
+        onProgress: (progress, message) => {
+          setUploadProgress(progress);
+          setUploadStatus(message);
+        }
+      });
+
+      if (result.source === 'server') {
+        setUploadStatus(`✅ Successfully parsed via server! Holdings & red flags updated. Redirecting to dashboard...`);
+        setUploadError(null);
+      } else if (result.error) {
+        // Server failed but local parser succeeded (fallback)
+        setUploadError(`Note: Server parser unavailable (${result.error}). Used local parser instead — holdings updated!`);
+        setUploadStatus(`✅ Parsed locally. Holdings updated. Redirecting to dashboard...`);
+      } else {
+        setUploadStatus(`✅ Successfully parsed statement from ${file.name}! Holdings updated. Redirecting to dashboard...`);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setUploadError(message);
+      setUploadStatus(`Upload failed: ${message}`);
+      setUploadProgress(100);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -76,8 +103,33 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           {uploadStatus && (
-            <div className="mt-4 p-3 bg-[#E6F4EA] border border-[#A7F3D0] rounded-xl text-xs font-bold text-[#2BB673] inline-block">
-              {uploadStatus}
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <div>{uploadStatus}</div>
+                <div className="text-[#64748B]">{uploadProgress}%</div>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden bg-[#EDE9DF]">
+                <div
+                  style={{ width: `${uploadProgress}%` }}
+                  className="h-full rounded-full bg-[#C57D25] transition-all duration-300"
+                />
+              </div>
+              {isUploading && (
+                <div className="flex items-center space-x-2 text-xs text-[#64748B]">
+                  <span className="inline-block w-3 h-3 rounded-full bg-[#C57D25] animate-pulse" />
+                  <span>Processing...</span>
+                </div>
+              )}
+              {uploadError && (
+                <div className={`text-xs font-bold rounded-xl p-3 ${
+                  uploadError.startsWith('Note:')
+                    ? 'text-[#92400E] bg-[#FEF3C7] border border-[#FDE68A]'
+                    : 'text-[#B91C1C] bg-[#FEE2E2] border border-[#FECACA]'
+                }`}>
+                  <div className="font-semibold">{uploadError.startsWith('Note:') ? 'ℹ️ Fallback used' : 'Parsing error'}</div>
+                  <div>{uploadError}</div>
+                </div>
+              )}
             </div>
           )}
 

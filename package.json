@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start-server": "node server/llm_proxy.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -13,10 +14,14 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",
     "pdfjs-dist": "^6.2.108",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { PageId, UserRole, HoldingItem, RedFlagAlert, CasParseResult, AuditLogEntry } from '../types';
+import type { PageId, UserRole, HoldingItem, RedFlagAlert, CasParseResult, AuditLogEntry, AssetCategory } from '../types';
 import { ROLE_PERMISSIONS } from '../types';
 import { INITIAL_HOLDINGS, MOCK_RED_FLAGS } from '../data/mockData';
 import { extractTextFromPdf, parseCasText } from '../utils/casParser';
@@ -31,7 +31,7 @@ interface AppContextType {
 
   // CAS Upload
   uploadedCas: CasParseResult | null;
-  handleCasUpload: (fileOrName: File | string) => Promise<void>;
+  handleCasUpload: (fileOrName: File | string, options?: { onProgress?: (progress: number, message: string) => void }) => Promise<{ source: 'server' | 'client'; error?: string }>;
   resetPortfolio: () => void;
 
   // Onboarding
@@ -206,7 +206,14 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   }, []);
 
   // CAS Upload
-  const handleCasUpload = async (fileOrName: File | string) => {
+  const handleCasUpload = async (
+    fileOrName: File | string,
+    options?: { onProgress?: (progress: number, message: string) => void }
+  ): Promise<{ source: 'server' | 'client'; error?: string }> => {
+    const reportProgress = (progress: number, message: string) => {
+      options?.onProgress?.(progress, message);
+    };
+
     let rawText = '';
     let fileName = 'statement.pdf';
 
@@ -216,7 +223,111 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
       rawText = 'PRIYA SHARMA PAN: ABCDE1234F Statement Period: 01-Jan-2026 to 30-Jun-2026 Reliance Industries Ltd HDFC Bank Ltd Infosys Ltd PFC 7.35% NCD 2029 Embassy Office Parks REIT Grid Infrastructure InvIT Parag Parikh Flexi Cap Fund 18,92,882.14';
     } else if (fileOrName instanceof File) {
       fileName = fileOrName.name;
+      reportProgress(5, `Preparing ${fileName} for CAS parsing...`);
+      reportProgress(18, 'Uploading CAS to server parser endpoint...');
+
+      let serverError: string | undefined;
+      try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+        const form = new FormData();
+        form.append('file', fileOrName, fileName);
+        const resp = await fetch('/api/parse-cas', {
+          method: 'POST',
+          body: form,
+          signal: controller.signal
+        });
+        window.clearTimeout(timeoutId);
+
+        if (resp.ok) {
+          reportProgress(55, 'Server parser responded successfully.');
+          const serverParsed = await resp.json();
+          
+          const rawHoldings = Array.isArray(serverParsed.holdings) ? serverParsed.holdings : [];
+          const normalizedHoldings: HoldingItem[] = rawHoldings.map((h: any, idx: number) => {
+            const units = h.units || h.quantity || 1;
+            const curVal = h.currentValue || h.current_value || 0;
+            const avgPrice = h.avgPrice || h.cost_or_nav || 100;
+            const currentPrice = h.currentPrice || h.current_price || (curVal / (units || 1));
+            const category = (h.category || (h.asset_class === 'equity' || h.asset_class === 'mutual_fund' ? 'equities' : (h.asset_class === 'bond' ? 'bonds' : 'reits_invits'))) as AssetCategory;
+            
+            return {
+              id: h.id || `h-${idx + 1}`,
+              name: h.name || h.security_name || 'Holding Item',
+              ticker: h.ticker || h.isin || `H-${idx + 1}`,
+              category,
+              broker: h.broker || h.broker_or_dp || 'Depository',
+              depository: h.depository || (h.broker_or_dp?.includes('NSDL') ? 'NSDL' : 'CDSL'),
+              units,
+              avgPrice,
+              currentPrice,
+              currentValue: curVal,
+              portfolioWeight: h.portfolioWeight || 0,
+              lockInMonths: h.lockInMonths || 0,
+              riskCategory: h.riskCategory || 'Moderate',
+              suitabilityScore: h.suitabilityScore || 85,
+              causalChain: h.causalChain || {
+                cause: 'Imported from CAS Statement',
+                mechanism: `${category} holding`,
+                impact: `Current value ₹${curVal.toLocaleString('en-IN')}`
+              }
+            };
+          });
+
+          const casFromServer = {
+            investorName: serverParsed.investor_name || serverParsed.investorName || 'Investor',
+            pan: serverParsed.pan || 'ABCDE1234F',
+            statementPeriod: serverParsed.statement_period || serverParsed.statementPeriod || 'Current Period',
+            totalAssets: serverParsed.total_portfolio_value || serverParsed.totalAssets || normalizedHoldings.reduce((sum, h) => sum + h.currentValue, 0),
+            holdingsCount: normalizedHoldings.length,
+            detectedBrokers: Array.from(new Set(normalizedHoldings.map(h => h.broker))),
+            parsedHoldings: normalizedHoldings,
+            rawExtractedText: serverParsed.raw_text || serverParsed.rawExtractedText || null
+          } as CasParseResult;
+
+          setUploadedCas(casFromServer);
+          setHoldings(normalizedHoldings);
+          setRedFlags((serverParsed.red_flags && serverParsed.red_flags.length) ? serverParsed.red_flags : MOCK_RED_FLAGS);
+          reportProgress(100, 'Server endpoint reached and parsed successfully.');
+          setCurrentPage('dashboard');
+          return { source: 'server' as const };
+        }
+
+        const serverText = await resp.text();
+        serverError = resp.status === 404
+          ? 'Server parser endpoint not found at /api/parse-cas. Start the backend server or correct the proxy route.'
+          : `Server parser returned ${resp.status}: ${serverText}`;
+        reportProgress(100, serverError);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        serverError = message.includes('abort')
+          ? 'Server parser timed out after 15s.'
+          : `Server parser error: ${message}`;
+        reportProgress(100, serverError);
+      }
+
+      reportProgress(60, serverError ? `Falling back to local parser: ${serverError}` : 'Using local parser fallback.');
       rawText = await extractTextFromPdf(fileOrName);
+      reportProgress(85, 'Local text extraction complete; parsing statement locally.');
+      const parsed = parseCasText(rawText, fileName);
+
+      const casResult: CasParseResult = {
+        investorName: parsed.investorName,
+        pan: parsed.pan,
+        statementPeriod: parsed.statementPeriod,
+        totalAssets: parsed.totalAssets,
+        holdingsCount: parsed.holdingsCount,
+        detectedBrokers: parsed.detectedBrokers,
+        parsedHoldings: parsed.parsedHoldings,
+        rawExtractedText: parsed.rawExtractedText
+      };
+
+      setUploadedCas(casResult);
+      setHoldings(parsed.parsedHoldings);
+      setRedFlags(parsed.redFlags.length > 0 ? parsed.redFlags : MOCK_RED_FLAGS);
+      reportProgress(100, serverError ? `Local parser complete; server endpoint issue: ${serverError}` : 'Local parser completed successfully.');
+      setCurrentPage('dashboard');
+      return { source: 'client' as const, error: serverError };
     }
 
     const parsed = parseCasText(rawText, fileName);
@@ -235,6 +346,9 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     setUploadedCas(casResult);
     setHoldings(parsed.parsedHoldings);
     setRedFlags(parsed.redFlags.length > 0 ? parsed.redFlags : MOCK_RED_FLAGS);
+    reportProgress(100, 'Sample CAS loaded locally.');
+    setCurrentPage('dashboard');
+    return { source: 'client' as const };
   };
 
   const resetPortfolio = () => {

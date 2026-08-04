@@ -45,7 +45,7 @@ export const AppSidebar: React.FC = () => {
   });
 
   return (
-    <aside className="w-64 bg-[#F7F5EE] border-r border-[#E8E4D9] flex flex-col min-h-screen p-5 shrink-0 select-none">
+    <aside className="w-64 border-r border-[#E8E4D9] flex flex-col h-screen sticky top-0 p-5 shrink-0 select-none overflow-y-auto" style={{ backgroundColor: '#F7F5EE', backgroundImage: 'none' }}>
       
       {/* Brand Logo */}
       <div 

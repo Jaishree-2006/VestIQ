@@ -57,6 +57,39 @@ export const ForBrokersPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Security & Document Ingestion Section */}
+        <div className="bg-white rounded-3xl p-8 border border-[#EDE9DF] shadow-xs mb-16">
+          <div className="flex items-center space-x-2 mb-6">
+            <ShieldCheck className="w-5 h-5 text-[#2BB673]" />
+            <h3 className="text-2xl font-extrabold text-[#0B1220]">Security Architecture & CAS Intake Strategy</h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-2xl border border-[#EDE9DF] bg-[#FAF8F5] p-5">
+              <h4 className="text-base font-extrabold text-[#0B1220] mb-3">Production-grade controls for investor data</h4>
+              <ul className="space-y-2 text-xs text-[#64748B] leading-relaxed">
+                <li>• TLS everywhere for HTTPS traffic with no insecure exceptions.</li>
+                <li>• AES-256 encryption at rest for stored documents and parsed data, using KMS-managed keys.</li>
+                <li>• Tokenization or masking for PANs, account numbers, and other identifiers in databases and logs.</li>
+                <li>• RBAC that controls who can query or reveal a document, not just who can view the UI.</li>
+                <li>• Append-only, tamper-evident audit logs for every access, export, or client-data reveal.</li>
+                <li>• DPDP Act 2023 alignment with deletion and retention controls for uploaded CAS files.</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-[#EDE9DF] bg-[#FFF8EE] p-5">
+              <h4 className="text-base font-extrabold text-[#0B1220] mb-3">Document parsing approach for MVP</h4>
+              <ul className="space-y-2 text-xs text-[#64748B] leading-relaxed">
+                <li>• Start with digitally generated CAS PDFs from NSDL, CDSL, and CAMS/KFintech.</li>
+                <li>• Use pdfplumber for text and table extraction, with camelot as a fallback for difficult layouts.</li>
+                <li>• Apply issuer-specific parsing rules rather than one universal parser for all CAS formats.</li>
+                <li>• If the PDF is actually a scanned image, fall back to OCR using Tesseract or a document-AI service.</li>
+                <li>• Keep the roadmap aligned with Account Aggregator integration as the longer-term production path.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Console Previews */}
         <div className="bg-white rounded-3xl p-8 border border-[#EDE9DF] shadow-xs mb-16">
           <h3 className="text-2xl font-extrabold text-[#0B1220] mb-6 text-center">

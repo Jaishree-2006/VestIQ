@@ -28,13 +28,6 @@ export const HomePage: React.FC = () => {
       {/* Hero Section with Exact Pastel Circle Backgrounds matching Image 1 */}
       <section className="relative pt-16 pb-24 overflow-hidden">
         
-        {/* Soft Overlapping Pastel Circles Background */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-[420px] pointer-events-none z-0">
-          {/* Gold Circle (left-center) */}
-          <div className="absolute top-0 left-12 w-[380px] h-[380px] rounded-full bg-[#FCEEBB]/70 blur-2xl transform -translate-x-1/4" />
-          {/* Mint Green Circle (right-center) */}
-          <div className="absolute top-4 right-12 w-[420px] h-[420px] rounded-full bg-[#D8F3E5]/70 blur-2xl transform translate-x-1/4" />
-        </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
           
@@ -271,28 +264,28 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Footer Banner */}
-      <footer className="bg-[#0B1220] text-white py-16 mt-auto">
+      {/* CTA Footer Banner - Light Theme */}
+      <footer className="bg-[#F6F4ED] text-[#0B1220] border-t border-[#EDE9DF] py-16 mt-auto">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold mb-4">
+          <h2 className="text-3xl font-extrabold text-[#0B1220] mb-4">
             Take control of your real multi-asset portfolio today
           </h2>
-          <p className="text-[#94A3B8] max-w-xl mx-auto mb-8 text-sm">
+          <p className="text-[#64748B] max-w-xl mx-auto mb-8 text-sm">
             Upload your NSDL / CDSL Consolidated Account Statement (CAS) to generate your explainable health score in under 60 seconds.
           </p>
           <button
             onClick={() => setCurrentPage('dashboard')}
-            className="px-8 py-3.5 rounded-xl font-bold bg-[#C57D25] text-white hover:bg-[#B06C19] transition-all shadow-lg cursor-pointer"
+            className="px-8 py-3.5 rounded-xl font-bold bg-[#C57D25] text-white hover:bg-[#B06C19] transition-all shadow-md hover:shadow-lg cursor-pointer"
           >
             Upload your CAS — Free
           </button>
           
-          <div className="mt-12 pt-8 border-t border-[#1E293B] text-xs text-[#64748B] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-12 pt-8 border-t border-[#EDE9DF] text-xs text-[#8B93A7] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>© 2026 VestIQ Intelligence Inc. Built for SEBI-aligned investor protection.</div>
             <div className="flex space-x-6">
-              <span className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('privacy' as any)}>Privacy Policy</span>
-              <span className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('terms' as any)}>Terms of Service</span>
-              <span className="hover:text-white cursor-pointer" onClick={() => setCurrentPage('for-brokers')}>Broker Licensing</span>
+              <span className="hover:text-[#0B1220] cursor-pointer" onClick={() => setCurrentPage('privacy' as any)}>Privacy Policy</span>
+              <span className="hover:text-[#0B1220] cursor-pointer" onClick={() => setCurrentPage('terms' as any)}>Terms of Service</span>
+              <span className="hover:text-[#0B1220] cursor-pointer" onClick={() => setCurrentPage('for-brokers')}>Broker Licensing</span>
             </div>
           </div>
         </div>
