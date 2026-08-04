@@ -98,6 +98,18 @@ h1, h2, h3, h4, h5, h6, nav, button, input, select, textarea, table, th, td {
 ::-webkit-scrollbar-thumb { background: #D4CEBF; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #B5AD9A; }
 
+/* ---- Doodle pattern: show on all full-page containers ---- */
+/* Tailwind's bg-[#FAF8F5] would cover the body doodle, so we restore it here */
+.min-h-screen {
+  background-color: transparent !important;
+  background-image: url('/doodle-pattern.svg');
+  background-size: 500px 375px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-position: top left;
+}
+
+
 /* ---- Sidebar — always solid background, never doodle ---- */
 aside {
   background-image: none !important;
