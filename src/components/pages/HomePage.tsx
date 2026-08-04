@@ -161,12 +161,12 @@ export const HomePage: React.FC = () => {
             
             {/* Card 1: Scattered Portfolios */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
               onClick={() => toggleCard(1)}
             >
-              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[1] ? 'rotate-y-180' : ''}`}>
+              <div className={`relative w-full h-full card-flip-inner ${flippedCards[1] ? 'is-flipped' : ''}`}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-[#FDF2F2] text-[#EF4444] flex items-center justify-center mb-4 border border-[#FCA5A5]/30">
                       <XCircle className="w-5 h-5" />
@@ -183,7 +183,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
                   <div>
                     <div className="flex items-center space-x-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
@@ -217,12 +217,12 @@ export const HomePage: React.FC = () => {
 
             {/* Card 2: Opaque Instruments */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
               onClick={() => toggleCard(2)}
             >
-              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[2] ? 'rotate-y-180' : ''}`}>
+              <div className={`relative w-full h-full card-flip-inner ${flippedCards[2] ? 'is-flipped' : ''}`}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-[#FFF8EE] text-[#C57D25] flex items-center justify-center mb-4 border border-[#F7E5C8]">
                       <FileText className="w-5 h-5" />
@@ -239,7 +239,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
                   <div>
                     <div className="flex items-center space-x-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
@@ -273,12 +273,12 @@ export const HomePage: React.FC = () => {
 
             {/* Card 3: Abstract Risk Scores */}
             <div 
-              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              className="perspective-1000 min-h-[320px] w-full cursor-pointer"
               onClick={() => toggleCard(3)}
             >
-              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[3] ? 'rotate-y-180' : ''}`}>
+              <div className={`relative w-full h-full card-flip-inner ${flippedCards[3] ? 'is-flipped' : ''}`}>
                 {/* Front Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] card-flip-front flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4 border border-[#A7F3D0]">
                       <Zap className="w-5 h-5" />
@@ -295,7 +295,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Back Side */}
-                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] card-flip-back flex flex-col justify-between shadow-2xl">
                   <div>
                     <div className="flex items-center space-x-2 mb-3">
                       <Sparkles className="w-4 h-4 text-[#C57D25]" />
