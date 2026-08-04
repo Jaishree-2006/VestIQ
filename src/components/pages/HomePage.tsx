@@ -15,11 +15,19 @@ import {
   Building2,
   ChevronRight,
   Zap,
-  Sparkles
+  Sparkles,
+  RotateCw,
+  Check
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { setCurrentPage } = useApp();
+  const [flippedCards, setFlippedCards] = React.useState<Record<number, boolean>>({});
+
+  const toggleCard = (index: number) => {
+    setFlippedCards(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#0B1220] flex flex-col font-sans selection:bg-[#FCEEBB]">
@@ -150,35 +158,175 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF]">
-              <div className="w-10 h-10 rounded-lg bg-[#FDF2F2] text-[#EF4444] flex items-center justify-center mb-4">
-                <XCircle className="w-5 h-5" />
+            
+            {/* Card 1: Scattered Portfolios */}
+            <div 
+              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              onClick={() => toggleCard(1)}
+            >
+              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[1] ? 'rotate-y-180' : ''}`}>
+                {/* Front Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                  <div>
+                    <div className="w-10 h-10 rounded-lg bg-[#FDF2F2] text-[#EF4444] flex items-center justify-center mb-4 border border-[#FCA5A5]/30">
+                      <XCircle className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0B1220] mb-2">Scattered Portfolios</h3>
+                    <p className="text-sm text-[#64748B] leading-relaxed">
+                      Your holdings are fragmented across Zerodha, Groww, ICICI Direct, and RBI Retail Direct. You lack a unified view of real exposure.
+                    </p>
+                  </div>
+                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
+                    <span>Hover or tap to flip for description</span>
+                  </div>
+                </div>
+
+                {/* Back Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-[#C57D25]" />
+                      <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-2">Unified Cross-Broker Intelligence</h4>
+                    <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
+                      Auto-ingests NSDL & CDSL Statements with 100% client-side privacy. Standardizes equities, MFs, bonds, and REITs into one real-time exposure dashboard.
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>Zero manual data entry</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>Single-click PAN Tokenization</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setCurrentPage('dashboard'); }}
+                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Try CAS Auto-Scanner</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-[#0B1220] mb-2">Scattered Portfolios</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">
-                Your holdings are fragmented across Zerodha, Groww, ICICI Direct, and RBI Retail Direct. You lack a unified view of real exposure.
-              </p>
             </div>
 
-            <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF]">
-              <div className="w-10 h-10 rounded-lg bg-[#FFF8EE] text-[#C57D25] flex items-center justify-center mb-4">
-                <FileText className="w-5 h-5" />
+            {/* Card 2: Opaque Instruments */}
+            <div 
+              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              onClick={() => toggleCard(2)}
+            >
+              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[2] ? 'rotate-y-180' : ''}`}>
+                {/* Front Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                  <div>
+                    <div className="w-10 h-10 rounded-lg bg-[#FFF8EE] text-[#C57D25] flex items-center justify-center mb-4 border border-[#F7E5C8]">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0B1220] mb-2">Opaque Instruments</h3>
+                    <p className="text-sm text-[#64748B] leading-relaxed">
+                      REITs, InvITs, and structured corporate bonds are sold without plain-English disclosure of lock-in terms or interest rate vulnerability.
+                    </p>
+                  </div>
+                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
+                    <span>Hover or tap to flip for description</span>
+                  </div>
+                </div>
+
+                {/* Back Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-[#C57D25]" />
+                      <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-2">Plain-English Disclosures</h4>
+                    <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
+                      Translates complex debt covenants, YTM shifts, and commercial real estate vacancy rates into straightforward human explanations.
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>Flags hidden lock-in periods</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>Detects mis-sold commission products</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setCurrentPage('red-flags'); }}
+                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Open Red Flag Detector</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-[#0B1220] mb-2">Opaque Instruments</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">
-                REITs, InvITs, and structured corporate bonds are sold without plain-English disclosure of lock-in terms or interest rate vulnerability.
-              </p>
             </div>
 
-            <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF]">
-              <div className="w-10 h-10 rounded-lg bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4">
-                <Zap className="w-5 h-5" />
+            {/* Card 3: Abstract Risk Scores */}
+            <div 
+              className="perspective-1000 min-h-[320px] w-full group cursor-pointer"
+              onClick={() => toggleCard(3)}
+            >
+              <div className={`relative w-full h-full duration-700 transform-style-3d group-hover:rotate-y-180 transition-transform ${flippedCards[3] ? 'rotate-y-180' : ''}`}>
+                {/* Front Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#FAF8F5] p-6 rounded-2xl border border-[#EDE9DF] backface-hidden flex flex-col justify-between shadow-xs hover:border-[#C57D25]/40 transition-colors">
+                  <div>
+                    <div className="w-10 h-10 rounded-lg bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4 border border-[#A7F3D0]">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#0B1220] mb-2">Abstract Risk Scores</h3>
+                    <p className="text-sm text-[#64748B] leading-relaxed">
+                      A bare risk score of "6.5/10" gives zero actionable insight into why your portfolio drops when macro rates move.
+                    </p>
+                  </div>
+                  <div className="pt-4 border-t border-[#EDE9DF]/60 flex items-center space-x-2 text-xs text-[#C57D25] font-semibold">
+                    <RotateCw className="w-3.5 h-3.5 animate-spin-slow" />
+                    <span>Hover or tap to flip for description</span>
+                  </div>
+                </div>
+
+                {/* Back Side */}
+                <div className="absolute inset-0 w-full h-full bg-[#0B1220] text-white p-6 rounded-2xl border border-[#1E293B] backface-hidden rotate-y-180 flex flex-col justify-between shadow-2xl">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-[#C57D25]" />
+                      <span className="text-xs uppercase tracking-wider text-[#C57D25] font-bold">VestIQ Solution</span>
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-2">Causal Macro Stress Testing</h4>
+                    <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
+                      Simulates exact macroeconomic events like +100bps RBI rate hikes, crude price surges, or sector crashes to reveal exact ₹ impacts on your wealth.
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>What-if rate hike scenario sandbox</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-[#E2E8F0]">
+                        <Check className="w-3.5 h-3.5 text-[#2BB673] shrink-0" />
+                        <span>Peer-group risk benchmarking</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setCurrentPage('shock-sandbox'); }}
+                    className="w-full mt-4 py-2 px-3 rounded-lg bg-[#C57D25] hover:bg-[#B06C19] text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Launch Shock Sandbox</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-[#0B1220] mb-2">Abstract Risk Scores</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">
-                A bare risk score of "6.5/10" gives zero actionable insight into why your portfolio drops when macro rates move.
-              </p>
             </div>
+
           </div>
         </div>
       </section>
