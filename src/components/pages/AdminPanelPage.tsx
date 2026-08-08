@@ -496,106 +496,156 @@ export const AdminPanelPage: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <h2 className="font-extrabold text-base text-[#14213D] mb-2 flex items-center space-x-2">
-            <Building2 className="w-4 h-4 text-[#2BB673]" />
-            <span>Broker / Depository Whitelisting</span>
-          </h2>
-          <p className="text-xs text-[#6B7280] mb-4">
-            Onboard new brokerage organizations for whitelisted VestIQ Enterprise deployment. All additions are audit-logged.
-          </p>
+        <div className="bg-[#F4F3EF] rounded-[28px] border border-[#DDE2DB] p-0 shadow-[0_8px_20px_rgba(16,24,40,0.03)] mb-8 overflow-hidden">
+          <div className="px-8 py-6 border-b border-[#E9E4DD] bg-[#F6F5F1]">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#DFF2E6] flex items-center justify-center text-[#2D9D76]">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-[28px] font-extrabold tracking-[-0.04em] text-[#1F2D3D]">Broker / Depository Whitelisting</h2>
+              </div>
+            </div>
+            <p className="text-[18px] text-[#4B5563] leading-relaxed">
+              Onboard new brokerage organizations for whitelisted VestIQ Enterprise deployment.
+            </p>
+            <p className="text-[18px] text-[#4B5563] mt-1">All additions are audit-logged.</p>
+          </div>
 
-          {/* Add new broker */}
-          <div className="mb-5">
-            <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-3 mb-3">
-              <input
-                type="text"
-                placeholder="Organization name"
-                value={onboardingBroker}
-                onChange={(e) => setOnboardingBroker(e.target.value)}
-                className="px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium focus:outline-none focus:border-[#C57D25]"
-              />
-              <select
-                value={brokerIntegrationType}
-                onChange={(e) => setBrokerIntegrationType(e.target.value)}
-                className="px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium focus:outline-none focus:border-[#C57D25]"
-              >
-                <option value="VestIQ API v3">VestIQ API v3</option>
-                <option value="G-Sec API Sync">G-Sec API Sync</option>
-                <option value="Broker Import Feed">Broker Import Feed</option>
-                <option value="Depository Sync">Depository Sync</option>
-              </select>
+          <div className="px-8 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+              <div>
+                <label className="block text-[19px] font-bold text-[#1F2D3D] mb-3">
+                  Organization name <span className="text-[#E11D48]">*</span>
+                </label>
+                <div className="flex items-center gap-3 rounded-[14px] border border-[#6CB88E] bg-[#F7FBF8] px-4 py-4 focus-within:ring-2 focus-within:ring-[#9AD5B6]">
+                  <Building2 className="w-5 h-5 text-[#2D9D76]" />
+                  <input
+                    type="text"
+                    placeholder="Enter organization name"
+                    value={onboardingBroker}
+                    onChange={(e) => setOnboardingBroker(e.target.value)}
+                    className="w-full bg-transparent text-[18px] text-[#1F2D3D] placeholder:text-[#8B93A7] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[19px] font-bold text-[#1F2D3D] mb-3">
+                  API version <span className="text-[#E11D48]">*</span>
+                </label>
+                <div className="rounded-[14px] border border-[#D7DCE1] bg-[#F7F7F5] px-4 py-4">
+                  <select
+                    value={brokerIntegrationType}
+                    onChange={(e) => setBrokerIntegrationType(e.target.value)}
+                    className="w-full bg-transparent text-[18px] text-[#1F2D3D] outline-none"
+                  >
+                    <option value="VestIQ API v3">VestIQ API v3</option>
+                    <option value="G-Sec API Sync">G-Sec API Sync</option>
+                    <option value="Broker Import Feed">Broker Import Feed</option>
+                    <option value="Depository Sync">Depository Sync</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-              <input
-                type="text"
-                placeholder="SEBI Registration Number (optional)"
-                value={brokerSebiRegNumber}
-                onChange={(e) => setBrokerSebiRegNumber(e.target.value)}
-                className="px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium focus:outline-none focus:border-[#C57D25]"
-              />
-              <input
-                type="email"
-                placeholder="Contact email (optional)"
-                value={brokerContactEmail}
-                onChange={(e) => setBrokerContactEmail(e.target.value)}
-                className="px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium focus:outline-none focus:border-[#C57D25]"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div>
+                <label className="block text-[19px] font-bold text-[#1F2D3D] mb-3">
+                  SEBI Registration Number (optional)
+                </label>
+                <div className="flex items-center gap-3 rounded-[14px] border border-[#D7DCE1] bg-[#F7F7F5] px-4 py-4">
+                  <span className="text-[20px] text-[#5B6470]">🧾</span>
+                  <input
+                    type="text"
+                    placeholder="Enter SEBI registration number"
+                    value={brokerSebiRegNumber}
+                    onChange={(e) => setBrokerSebiRegNumber(e.target.value)}
+                    className="w-full bg-transparent text-[18px] text-[#1F2D3D] placeholder:text-[#8B93A7] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[19px] font-bold text-[#1F2D3D] mb-3">
+                  Contact email (optional)
+                </label>
+                <div className="flex items-center gap-3 rounded-[14px] border border-[#D7DCE1] bg-[#F7F7F5] px-4 py-4">
+                  <span className="text-[20px] text-[#5B6470]">✉️</span>
+                  <input
+                    type="email"
+                    placeholder="Enter contact email"
+                    value={brokerContactEmail}
+                    onChange={(e) => setBrokerContactEmail(e.target.value)}
+                    className="w-full bg-transparent text-[18px] text-[#1F2D3D] placeholder:text-[#8B93A7] outline-none"
+                  />
+                </div>
+              </div>
             </div>
 
             {brokerFormError && (
-              <div className="mb-3 text-[11px] text-[#B91C1C] font-medium">{brokerFormError}</div>
+              <div className="mb-4 text-[15px] text-[#B91C1C] font-medium">{brokerFormError}</div>
             )}
 
-            <div className="flex justify-end">
+            <div className="border-t border-dashed border-[#D7DCE1] pt-6 flex justify-end">
               <button
                 onClick={handleBrokerOnboard}
                 disabled={!onboardingBroker.trim() || whitelistLoading}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                className={`inline-flex items-center gap-3 px-6 py-4 rounded-[16px] text-[18px] font-bold transition-all ${
                   onboardingBroker.trim() && !whitelistLoading
-                    ? 'bg-[#2BB673] hover:bg-[#22A163] text-white shadow-xs'
-                    : 'bg-[#F1EFE9] text-[#8B93A7] cursor-not-allowed'
+                    ? 'bg-[#EAF6EE] text-[#2D9D76] border border-[#79C7A0] hover:bg-[#DFF2E6]'
+                    : 'bg-[#EEF2EF] text-[#9AA4A0] border border-[#DADFD9] cursor-not-allowed'
                 }`}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-5 h-5" />
                 <span>{whitelistLoading ? 'Logging...' : 'Whitelist & Log'}</span>
               </button>
             </div>
           </div>
 
-          {/* Existing whitelisted brokers */}
-          <div className="divide-y divide-[#F1EFE9]">
+          <div className="px-8 pb-8">
             {brokerListLoading ? (
-              <div className="py-3 text-xs text-[#8B93A7]">Loading broker whitelist…</div>
+              <div className="rounded-[18px] border border-[#CDE7D6] bg-[#EEF8F2] px-6 py-5 text-[18px] text-[#4F7A61] font-medium">
+                Loading broker whitelist…
+              </div>
             ) : brokers.length === 0 ? (
-              <div className="py-3 text-xs text-[#8B93A7]">No broker organizations currently whitelisted.</div>
-            ) : brokers.map((b) => {
-              const isActive = b.status === 'active';
-              const badgeClasses = isActive
-                ? 'bg-[#E6F4EA] text-[#2BB673]'
-                : 'bg-[#F1F3F5] text-[#6B7280]';
-
-              return (
-                <div key={b.id} className="py-3 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-bold text-[#14213D]">{b.org_name}</div>
-                    <div className="text-[10px] text-[#8B93A7] font-mono mt-0.5">{b.integration_type} · Since {new Date(b.onboarded_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</div>
-                    {b.sebi_reg_number && (
-                      <div className="text-[10px] text-[#8B93A7] font-mono mt-0.5">SEBI Reg. No. {b.sebi_reg_number}</div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleBrokerStatusToggle(b)}
-                    disabled={!isActive || revokingId === b.id}
-                    className={`px-2.5 py-0.5 rounded-full font-bold ${badgeClasses} ${!isActive || revokingId === b.id ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
-                  >
-                    {revokingId === b.id ? 'Updating...' : isActive ? 'Active' : 'Revoked'}
-                  </button>
+              <div className="rounded-[18px] border border-[#CDE7D6] bg-[#EEF8F2] px-6 py-6 text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 rounded-full bg-[#DFF2E6] text-[#2D9D76] flex items-center justify-center text-2xl">✓</div>
                 </div>
-              );
-            })}
+                <div className="text-[20px] font-bold text-[#1F2D3D]">No broker organizations currently whitelisted.</div>
+                <div className="mt-2 text-[18px] text-[#4B5563]">Add organizations above to get started.</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {brokers.map((b) => {
+                  const isActive = b.status === 'active';
+                  const badgeClasses = isActive
+                    ? 'bg-[#E6F4EA] text-[#2BB673]'
+                    : 'bg-[#F1F3F5] text-[#6B7280]';
+
+                  return (
+                    <div key={b.id} className="flex items-center justify-between rounded-[14px] border border-[#E8E9E6] bg-white px-4 py-3">
+                      <div>
+                        <div className="text-[18px] font-bold text-[#1F2D3D]">{b.org_name}</div>
+                        <div className="text-[13px] text-[#6B7280] font-mono mt-0.5">{b.integration_type} · Since {new Date(b.onboarded_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</div>
+                        {b.sebi_reg_number && (
+                          <div className="text-[13px] text-[#6B7280] font-mono mt-0.5">SEBI Reg. No. {b.sebi_reg_number}</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleBrokerStatusToggle(b)}
+                        disabled={!isActive || revokingId === b.id}
+                        className={`px-3 py-1.5 rounded-full text-[13px] font-bold ${badgeClasses} ${!isActive || revokingId === b.id ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
+                      >
+                        {revokingId === b.id ? 'Updating...' : isActive ? 'Active' : 'Revoked'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
