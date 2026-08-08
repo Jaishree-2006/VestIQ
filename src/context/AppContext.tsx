@@ -9,6 +9,7 @@ import { hasActivePremiumAccess, trialDaysRemaining, makeTrialEndsAt } from '../
 import { supabase } from '../lib/supabaseClient';
 import { validateCasFile } from '../utils/casFileValidation';
 import { extractTextFromPdf, parseCasText } from '../utils/casParser';
+import { deriveRedFlagsFromHoldings } from '../utils/redFlags';
 
 interface AppContextType {
   // Routing
@@ -339,6 +340,9 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   const [healthScoreBreakdown, setHealthScoreBreakdown] = useState<HealthScoreBreakdown>(() => {
     return computeHealthScorePreview(holdings);
   });
+  const derivedRedFlags = React.useMemo(() => {
+    return redFlags.length > 0 ? redFlags : deriveRedFlagsFromHoldings(holdings);
+  }, [holdings, redFlags]);
   const healthScore = healthScoreBreakdown.score;
 
   // Authoritative server health score fetcher
@@ -960,7 +964,7 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
         hasActivePremiumAccess: activePremiumAccess,
         trialDaysRemaining: daysLeftInTrial,
         holdings,
-        redFlags,
+        redFlags: derivedRedFlags,
         healthScore,
         healthScoreBreakdown,
         healthScoreThresholds,

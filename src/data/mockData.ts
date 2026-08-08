@@ -121,7 +121,7 @@ export const MOCK_RED_FLAGS: RedFlagAlert[] = [
     category: 'liquidity_mismatch',
     description: 'This holding has a 3-year lock-in, but you said you may need this money in 18 months.',
     suggestedAction: 'Consider shifting ₹50,000 into liquid short-duration G-Secs before Q3 horizon.',
-    sebiRuleRef: 'SEBI Circular CIR/IMD/DF/21/2012 on Investor Horizon Matching'
+    sebiRuleRef: 'SEBI investor-horizon and product-suitability guidance'
   },
   {
     id: 'rf2',
@@ -132,7 +132,7 @@ export const MOCK_RED_FLAGS: RedFlagAlert[] = [
     category: 'concentration_risk',
     description: '40% of total portfolio value is concentrated in a single REIT asset class.',
     suggestedAction: 'Rebalance 15% from REIT into high-grade corporate bonds or diversified equity index.',
-    sebiRuleRef: 'SEBI Advisory on Alternate Asset Concentration'
+    sebiRuleRef: 'SEBI alternative-asset concentration and suitability guidance'
   }
 ];
 
@@ -289,7 +289,7 @@ export const MOCK_SUITABILITY_REPORTS: SuitabilityReportRecord[] = [
         category: 'liquidity_mismatch',
         description: 'Holding has 3-year lock-in vs stated 18-month liquidity horizon.',
         suggestedAction: 'Reallocate ₹50,000 to liquid G-Secs.',
-        sebiRuleRef: 'SEBI Circular CIR/IMD/DF/21/2012'
+        sebiRuleRef: 'SEBI product suitability and investor-horizon guidance'
       }
     ]
   },

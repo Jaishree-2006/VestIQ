@@ -2,9 +2,27 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { AppSidebar } from '../layout/AppSidebar';
 import { AlertTriangle, ShieldCheck, CheckCircle, ArrowRight, FileText, Info } from 'lucide-react';
+import { deriveRedFlagsFromHoldings } from '../../utils/redFlags';
+
+const normalizeSeverity = (value: string) => value?.charAt(0).toUpperCase() + value?.slice(1) || 'Medium';
 
 export const RedFlagsPage: React.FC = () => {
   const { redFlags, holdings, setCurrentPage } = useApp();
+  const [filter, setFilter] = React.useState<'active' | 'resolved' | 'all'>('active');
+
+  const activeFlags = (redFlags || []).filter((flag) => !['resolved', 'acknowledged'].includes(flag.status || 'active'));
+  const resolvedFlags = (redFlags || []).filter((flag) => ['resolved', 'acknowledged'].includes(flag.status || 'active'));
+  const liveFlags = activeFlags.length > 0 ? activeFlags : deriveRedFlagsFromHoldings(holdings);
+  const visibleFlags = filter === 'active' ? liveFlags : filter === 'resolved' ? resolvedFlags : [...liveFlags, ...resolvedFlags];
+
+  const handleSimulate = (flag: { holdingId: string; holdingName: string; title: string }) => {
+    sessionStorage.setItem('vestiq-shock-focus', JSON.stringify({
+      holdingId: flag.holdingId,
+      holdingName: flag.holdingName,
+      title: flag.title,
+    }));
+    setCurrentPage('shock-sandbox');
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
@@ -27,12 +45,32 @@ export const RedFlagsPage: React.FC = () => {
 
         {/* Active Red Flags Cards */}
         <div className="space-y-6 mb-12">
-          <h2 className="text-lg font-bold text-[#14213D] flex items-center justify-between">
-            <span>Active Red Flag Alerts ({redFlags.length})</span>
-            <span className="text-xs font-normal text-[#8B93A7]">Automated continuous compliance scan</span>
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-[#14213D] flex items-center justify-between">
+              <span>{filter === 'resolved' ? 'Resolved / Acknowledged Alerts' : filter === 'all' ? 'All Compliance Alerts' : 'Active Red Flag Alerts'} ({visibleFlags.length})</span>
+            </h2>
+            <div className="inline-flex rounded-xl border border-[#EDE9DF] bg-white p-1">
+              {(['active', 'resolved', 'all'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setFilter(option)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors ${filter === option ? 'bg-[#FFF8EE] text-[#C57D25]' : 'text-[#6B7280]'}`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {redFlags.map((flag) => (
+          {visibleFlags.length === 0 ? (
+            <div className="bg-white border border-dashed border-[#D5D8DD] rounded-3xl p-8 text-center text-[#6B7280]">
+              <ShieldCheck className="w-10 h-10 mx-auto text-[#2BB673] mb-3" />
+              <h3 className="text-xl font-bold text-[#14213D] mb-2">No active compliance flags</h3>
+              <p className="max-w-md mx-auto text-sm leading-relaxed">
+                Your current portfolio looks well-aligned to your stated horizon and risk profile. Review the holdings matrix below or upload a revised CAS to re-run the scanner.
+              </p>
+            </div>
+          ) : visibleFlags.map((flag) => (
             <div 
               key={flag.id}
               className="bg-white border-2 border-[#FCA5A5] rounded-3xl p-6 shadow-xs relative overflow-hidden"
@@ -43,7 +81,7 @@ export const RedFlagsPage: React.FC = () => {
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5]">
-                      {flag.severity} Severity Flag
+                      {normalizeSeverity(flag.severity)} Severity Flag
                     </span>
                     <span className="text-sm text-[#8B93A7] font-semibold">
                       Target: {flag.holdingName}
@@ -55,7 +93,7 @@ export const RedFlagsPage: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => setCurrentPage('shock-sandbox')}
+                  onClick={() => handleSimulate(flag)}
                   className="px-4 py-2.5 bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer shrink-0"
                 >
                   Simulate Risk Impact

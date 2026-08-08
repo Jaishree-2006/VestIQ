@@ -13,16 +13,31 @@ export const ShockSandboxPage: React.FC = () => {
     holdings
   } = useApp();
 
+  const [scenarioFocus, setScenarioFocus] = React.useState<{ holdingId: string; holdingName: string; title: string } | null>(null);
+
+  React.useEffect(() => {
+    const saved = sessionStorage.getItem('vestiq-shock-focus');
+    if (saved) {
+      try {
+        setScenarioFocus(JSON.parse(saved));
+      } catch {
+        // ignore malformed saved scenario
+      }
+    }
+  }, []);
+
+  const focusHolding = scenarioFocus && holdings.find((holding) => holding.id === scenarioFocus.holdingId);
+
   // Baseline Total Value = ₹18,42,600
-  const baseValue = 1842600;
+  const baseValue = holdings.reduce((sum, holding) => sum + (Number(holding.currentValue) || 0), 0) || 1842600;
 
   // Real-time shock impact calculation
   // REITs fall ~15% per +1% rate hike
   // Equities fall by market crash %
   // Sovereign bonds rise or stay stable depending on yield duration
-  const reitValue = 712600;
-  const equityValue = 820000;
-  const bondValue = 310000;
+  const reitValue = holdings.filter((holding) => holding.category === 'reits_invits' || /REIT|InvIT/i.test(holding.name)).reduce((sum, holding) => sum + (Number(holding.currentValue) || 0), 0) || 712600;
+  const equityValue = holdings.filter((holding) => holding.category === 'equities').reduce((sum, holding) => sum + (Number(holding.currentValue) || 0), 0) || 820000;
+  const bondValue = holdings.filter((holding) => holding.category === 'bonds').reduce((sum, holding) => sum + (Number(holding.currentValue) || 0), 0) || 310000;
 
   const shockedReit = reitValue * (1 - (interestRateChange * 0.15));
   const shockedEquity = equityValue * (1 + (marketCrashPct / 100));
@@ -66,6 +81,8 @@ export const ShockSandboxPage: React.FC = () => {
             onClick={() => {
               setInterestRateChange(1.0);
               setMarketCrashPct(0);
+              sessionStorage.removeItem('vestiq-shock-focus');
+              setScenarioFocus(null);
             }}
             className="px-4 py-2.5 bg-white border border-[#EDE9DF] rounded-xl text-sm font-bold text-[#6B7280] hover:text-[#14213D] hover:bg-[#F6F4ED] transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto shadow-xs"
           >

@@ -102,7 +102,7 @@ export function computeHealthScorePreview(
       description: `High concentration in: ${concentratedDetails.join(', ')}`,
       penalty: -roundedPenalty,
       suggestion: `Rebalance single holdings above 25% to recover up to ${roundedPenalty} points.`,
-      sebiRuleRef: 'SEBI IA Regulations — Concentration Limits',
+      sebiRuleRef: 'SEBI asset-concentration and suitability guidance',
     };
     breakdown.push(factor);
   }
@@ -156,7 +156,7 @@ export function computeHealthScorePreview(
       description: `Lock-in restriction detected on: ${illiquidDetails.join(', ')}`,
       penalty: -totalLiquidityPenalty,
       suggestion: `Consider liquid alternatives or extending target horizons to close the liquidity gap.`,
-      sebiRuleRef: 'SEBI Circular CIR/IMD/DF/13/2021 — Product Lock-in Rules',
+      sebiRuleRef: 'SEBI product suitability and investor-horizon guidance',
     };
     breakdown.push(factor);
   }

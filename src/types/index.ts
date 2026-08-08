@@ -151,6 +151,7 @@ export interface RedFlagAlert {
   description: string;
   suggestedAction: string;
   sebiRuleRef: string;
+  status?: 'active' | 'resolved' | 'acknowledged';
 }
 
 export interface ClientProfile {

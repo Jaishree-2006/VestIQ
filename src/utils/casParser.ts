@@ -292,8 +292,8 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
         title: '3-Year Lock-In Liquidity Mismatch', severity: 'high',
         category: 'liquidity_mismatch',
         description: 'RM mis-sold a 36-month lock-in InvIT (₹4,40,600 — 23.3% of portfolio) despite investor needing liquidity within 12 months.',
-        suggestedAction: 'Request RM secondary market redemption or file SEBI SCORES complaint.',
-        sebiRuleRef: 'SEBI Circular CIR/IMD/DF/13/2021 — RM Product Suitability'
+        suggestedAction: 'Request RM secondary market redemption or file a formal complaint through the prescribed channel.',
+        sebiRuleRef: 'SEBI product suitability and investor-horizon guidance'
       },
       {
         id: 'ps-rf2', holdingId: 'ps5', holdingName: 'Embassy Office Parks REIT',
@@ -301,7 +301,7 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
         category: 'concentration_risk',
         description: 'Combined REIT/InvIT exposure is 37.7% (₹7,12,600), exceeding the recommended 20% ceiling for moderate retail profiles.',
         suggestedAction: 'Trim InvIT post-lock-in period; rebalance into G-Secs or flexi-cap funds.',
-        sebiRuleRef: 'SEBI IA Regulations — Suitability Matrix'
+        sebiRuleRef: 'SEBI alternative-asset concentration and suitability guidance'
       }
     ];
 
@@ -321,7 +321,7 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
           category: 'liquidity_mismatch',
           description: `${h.name} carries a mandatory ${h.lockInMonths}-month lock-in restriction.`,
           suggestedAction: 'Evaluate liquidity requirements before locking in capital.',
-          sebiRuleRef: 'SEBI Circular — RM Product Suitability'
+          sebiRuleRef: 'SEBI product suitability and investor-horizon guidance'
         });
       }
     });

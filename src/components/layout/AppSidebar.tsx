@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 
 export const AppSidebar: React.FC = () => {
-  const { currentPage, navigateTo, setCurrentPage, role, redFlags, healthScore, isPremiumGated, userRecord, trialDaysRemaining, userName, signOut } = useApp();
+  const { currentPage, navigateTo, setCurrentPage, role, redFlags, holdings, healthScore, isPremiumGated, userRecord, trialDaysRemaining, userName, signOut } = useApp();
   const perms = ROLE_PERMISSIONS[role];
+  const activeRedFlagCount = (redFlags || []).filter(flag => !['resolved', 'acknowledged'].includes(flag.status || 'active')).length;
   const isActiveTrial = userRecord.plan === 'premium_trial' && (trialDaysRemaining !== null && trialDaysRemaining > 0);
   const isExpiredTrial = userRecord.plan === 'premium_trial' && trialDaysRemaining === 0;
   const isFree = userRecord.plan === 'free';
@@ -52,7 +53,7 @@ export const AppSidebar: React.FC = () => {
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'holdings', label: 'Holdings', icon: <Layers className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'explainability', label: 'Explainability', icon: <Lightbulb className="w-4 h-4" /> },
-    { id: 'red-flags', label: 'Red Flags', icon: <AlertTriangle className="w-4 h-4" />, badge: redFlags.length, roleOnly: ['investor_free', 'investor_premium'] },
+    { id: 'red-flags', label: 'Red Flags', icon: <AlertTriangle className="w-4 h-4" />, badge: activeRedFlagCount, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'shock-sandbox', label: 'Shock Sandbox', icon: <Sliders className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'peer-benchmark', label: 'Peer Benchmark', icon: <Users className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'retrospective', label: 'Retrospective', icon: <History className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
