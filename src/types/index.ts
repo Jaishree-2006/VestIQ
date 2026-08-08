@@ -10,6 +10,7 @@ export type PageId =
   | 'holdings'
   | 'explainability'
   | 'red-flags'
+  | 'profile'
   | 'shock-sandbox'
   | 'peer-benchmark'
   | 'retrospective'
@@ -89,7 +90,7 @@ export interface AuditLogEntry {
   id: string;
   timestamp: string;
   officerName: string;
-  action: 'drill_into_client' | 'export_audit_trail' | 'toggle_pii' | 'rule_threshold_change' | 'broker_onboarded';
+  action: 'drill_into_client' | 'export_audit_trail' | 'toggle_pii' | 'rule_threshold_change' | 'broker_onboarded' | 'broker_revoked' | 'broker_restored';
   targetEntityId: string;
   targetEntityName: string;
   reason?: string;
@@ -129,6 +130,7 @@ export interface HoldingItem {
   currentValue: number;
   portfolioWeight: number;
   lockInMonths: number;
+  liquidity_terms?: string;
   yieldPct?: number;
   riskCategory: 'Low' | 'Moderate' | 'High' | 'Very High';
   suitabilityScore: number;
@@ -163,6 +165,44 @@ export interface ClientProfile {
   topFlag: string;
   lastUpdated: string;
   assignedRM: string;
+  investmentTimeline?: string;
+}
+
+export type SuitabilityReportStatus = 'generated' | 'reviewed' | 'acknowledged';
+
+export interface SuitabilityReportRecord {
+  id: string;
+  clientId: string;
+  clientName: string;
+  casPan: string;
+  generatedBy: string;
+  generatedAt: string;
+  status: SuitabilityReportStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  healthScore: number;
+  redFlagsCount: number;
+  riskProfile: 'Conservative' | 'Moderate' | 'Aggressive';
+  investmentTimeline: string;
+  totalValue: number;
+  allocationSummary: {
+    equitiesPct: number;
+    mfsPct: number;
+    bondsPct: number;
+    reitsPct: number;
+  };
+  healthScoreFactors: {
+    factor: string;
+    penaltyOrBonus: number;
+    reason: string;
+  }[];
+  redFlagsList: {
+    title: string;
+    category: string;
+    description: string;
+    suggestedAction: string;
+    sebiRuleRef?: string;
+  }[];
 }
 
 export interface CasParseResult {
@@ -174,6 +214,8 @@ export interface CasParseResult {
   detectedBrokers: string[];
   parsedHoldings: HoldingItem[];
   rawExtractedText?: string;
+  /** ISO timestamp of when this CAS was uploaded — set automatically by AppContext */
+  uploadedAt: string;
 }
 
 /** Onboarding walkthrough steps */
@@ -185,11 +227,100 @@ export interface OnboardingStep {
   targetPage?: PageId;
 }
 
+// ─── Health Score Engine ──────────────────────────────────────────────────────
+
+export interface BehaviorHistory {
+  regularContributions?: boolean;
+  noPanicSelling?: boolean;
+}
+
+/** One line in the Health Score breakdown — a penalty or bonus factor */
+export interface HealthScoreFactor {
+  factor: string;
+  penaltyOrBonus: number; // negative for penalty, positive for bonus
+  reason: string;
+  // Backward-compatibility aliases for UI rendering
+  id?: string;
+  label?: string;
+  description?: string;
+  penalty?: number;
+  suggestion?: string;
+  sebiRuleRef?: string;
+}
+
+/** Full breakdown returned by computeHealthScore() */
+export interface HealthScoreBreakdown {
+  score: number;      // final clamped score 0–100
+  base?: number;
+  breakdown?: HealthScoreFactor[];
+  factors: HealthScoreFactor[];
+  thresholdsUsed?: HealthScoreThresholds;
+}
+
+export type HealthScoreTriggerType =
+  | 'new_holding'
+  | 'holding_removed'
+  | 'value_change'
+  | 'flag_resolved'
+  | 'flag_created'
+  | 'manual_rescore';
+
+export interface HealthScoreEvent {
+  id: string;
+  userId: string;
+  timestamp: string;
+  previousScore: number;
+  newScore: number;
+  delta: number;
+  triggerType: HealthScoreTriggerType;
+  reasonObject: {
+    factor: string;
+    penaltyOrBonus: number;
+    reason: string;
+  };
+}
+
+/**
+ * Admin-configurable thresholds for the Health Score Engine.
+ * Split into two groups:
+ *   - Trigger thresholds: WHEN does a penalty fire
+ *   - Penalty weights:    HOW MANY points does it deduct / add
+ *
+ * All values are surfaced in the Admin Panel and changes are audit-logged.
+ */
+export interface HealthScoreThresholds {
+  // Trigger thresholds
+  concentrationThresholdPct: number;  // single instrument max weight % (default 20)
+  reitInvitMaxPct: number;            // combined REIT/InvIT category max % (default 35)
+  lockinHorizonMonths: number;        // investor liquidity horizon in months (default 18)
+  fixedIncomeMinPct: number;          // minimum bond/fixed-income weight % (default 20)
+  // Penalty weights
+  concentrationPenalty: number;       // default 12
+  liquidityPenalty: number;           // default 10
+  volatilityPenalty: number;          // default 8
+  diversificationPenalty: number;     // default 6
+  behaviorBonus: number;              // default 8
+}
+
+export const DEFAULT_HEALTH_SCORE_THRESHOLDS: HealthScoreThresholds = {
+  concentrationThresholdPct: 20,
+  reitInvitMaxPct: 35,
+  lockinHorizonMonths: 18,
+  fixedIncomeMinPct: 20,
+  concentrationPenalty: 12,
+  liquidityPenalty: 10,
+  volatilityPenalty: 8,
+  diversificationPenalty: 6,
+  behaviorBonus: 8,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     step: 1,
-    title: 'Sign up & choose your role',
-    description: 'Your account is provisioned based on how you register — self-signup defaults you to the Investor role. Broker accounts are provisioned by your organization.',
+    title: 'Sign up and start free',
+    description: 'Self-signup provisions you as an Investor (Free). Broker and compliance accounts are provisioned separately by your organization.',
     action: 'Continue',
   },
   {
@@ -235,3 +366,50 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     targetPage: 'retrospective',
   },
 ];
+
+// ── Portfolio Guardian Types ──────────────────────────────────────────────────
+
+export interface NewsEvent {
+  id: string;
+  headline: string;
+  source: string;
+  publishedAt: string;
+  category: 'monetary_policy' | 'regulatory' | 'sector_news' | 'market_macro' | 'general_economy';
+  summary: string;
+  targetCategories?: AssetCategory[];
+  targetTickers?: string[];
+  targetKeywords?: string[];
+  simulatedScoreDelta: number; // e.g. -8
+  simulatedMtmImpact: string; // e.g. "-₹42,800 mark-to-market yield duration adjustment"
+  causalChain: {
+    cause: string;
+    mechanism: string;
+    impact: string;
+  };
+}
+
+export interface GuardianAlert {
+  id: string;
+  userId: string;
+  newsId: string;
+  newsHeadline: string;
+  newsSource: string;
+  publishedAt: string;
+  relevantHoldings: Array<{
+    id: string;
+    name: string;
+    ticker: string;
+    category: string;
+  }>;
+  severity: 'high' | 'medium' | 'low';
+  estimatedImpactScore: number;
+  estimatedImpactValue: string;
+  reasoningChain: {
+    cause: string;
+    mechanism: string;
+    impact: string;
+  };
+  status: 'unread' | 'read' | 'dismissed';
+  createdAt: string;
+}
+

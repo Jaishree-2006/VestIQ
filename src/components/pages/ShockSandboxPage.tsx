@@ -42,7 +42,7 @@ export const ShockSandboxPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex text-[#0B1220] font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
       <AppSidebar />
 
       <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
@@ -54,10 +54,10 @@ export const ShockSandboxPage: React.FC = () => {
               <Sliders className="w-4 h-4" />
               <span>Behavioral Twin Simulation Engine</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0B1220] mt-1">
+            <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
               Shock Sandbox
             </h1>
-            <p className="text-sm text-[#64748B] mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               Stress-test your real holdings against central bank rate hikes and market volatility.
             </p>
           </div>
@@ -67,9 +67,9 @@ export const ShockSandboxPage: React.FC = () => {
               setInterestRateChange(1.0);
               setMarketCrashPct(0);
             }}
-            className="px-4 py-2 bg-white border border-[#EDE9DF] rounded-xl text-xs font-bold text-[#64748B] hover:text-[#0B1220] hover:bg-[#F6F4ED] transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto shadow-xs"
+            className="px-4 py-2.5 bg-white border border-[#EDE9DF] rounded-xl text-sm font-bold text-[#6B7280] hover:text-[#14213D] hover:bg-[#F6F4ED] transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto shadow-xs"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-4 h-4" />
             <span>Reset Scenarios</span>
           </button>
         </div>
@@ -80,10 +80,10 @@ export const ShockSandboxPage: React.FC = () => {
           {/* Slider 1: Interest Rate Hike */}
           <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs">
             <div className="flex justify-between items-center mb-4">
-              <label className="font-bold text-sm text-[#0B1220]">
+              <label className="font-bold text-sm text-[#14213D]">
                 RBI Repo Rate Shift
               </label>
-              <span className="text-xs font-bold px-3 py-1 bg-[#FFF8EE] text-[#C57D25] rounded-full border border-[#F7E5C8] font-mono-num">
+              <span className="text-sm font-bold px-3 py-1 bg-[#FFF8EE] text-[#C57D25] rounded-full border border-[#F7E5C8] font-mono-num">
                 +{interestRateChange.toFixed(1)}% Rate Hike
               </span>
             </div>
@@ -98,13 +98,13 @@ export const ShockSandboxPage: React.FC = () => {
               className="w-full h-2 bg-[#F1EFE9] rounded-lg appearance-none cursor-pointer accent-[#C57D25]"
             />
 
-            <div className="flex justify-between text-[11px] text-[#8B93A7] mt-2 font-mono">
+            <div className="flex justify-between text-xs text-[#8B93A7] mt-2 font-mono">
               <span>0.0% (Current)</span>
               <span>+1.5%</span>
               <span>+3.0% (Severe)</span>
             </div>
 
-            <p className="text-xs text-[#64748B] mt-4 pt-3 border-t border-[#F1EFE9]">
+            <p className="text-sm text-[#6B7280] mt-4 pt-3 border-t border-[#F1EFE9]">
               💡 <strong>Impact mechanism:</strong> REIT & InvIT asset prices fall because cash yields must expand to remain competitive with G-Sec bonds.
             </p>
           </div>
@@ -112,10 +112,10 @@ export const ShockSandboxPage: React.FC = () => {
           {/* Slider 2: Equity Market Crash */}
           <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs">
             <div className="flex justify-between items-center mb-4">
-              <label className="font-bold text-sm text-[#0B1220]">
+              <label className="font-bold text-sm text-[#14213D]">
                 Nifty Equity Drawdown
               </label>
-              <span className="text-xs font-bold px-3 py-1 bg-[#FDF2F2] text-[#EF4444] rounded-full border border-[#FCA5A5] font-mono-num">
+              <span className="text-sm font-bold px-3 py-1 bg-[#FDF2F2] text-[#EF4444] rounded-full border border-[#FCA5A5] font-mono-num">
                 {marketCrashPct}% Crash
               </span>
             </div>
@@ -130,13 +130,13 @@ export const ShockSandboxPage: React.FC = () => {
               className="w-full h-2 bg-[#F1EFE9] rounded-lg appearance-none cursor-pointer accent-[#EF4444]"
             />
 
-            <div className="flex justify-between text-[11px] text-[#8B93A7] mt-2 font-mono">
+            <div className="flex justify-between text-xs text-[#8B93A7] mt-2 font-mono">
               <span>-35% (Crash)</span>
               <span>-15%</span>
               <span>0% (Stable)</span>
             </div>
 
-            <p className="text-xs text-[#64748B] mt-4 pt-3 border-t border-[#F1EFE9]">
+            <p className="text-sm text-[#6B7280] mt-4 pt-3 border-t border-[#F1EFE9]">
               💡 <strong>Impact mechanism:</strong> Large-cap equity holdings (HDFC Bank, Infosys) reprice according to equity risk premia.
             </p>
           </div>
@@ -151,10 +151,10 @@ export const ShockSandboxPage: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 mb-6">
             <div>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono-num text-[#0B1220]">
+              <div className="text-3xl sm:text-4xl font-extrabold font-mono-num text-[#14213D]">
                 ₹{shockedTotal.toLocaleString('en-IN')}
               </div>
-              <div className="text-xs text-[#8B93A7] mt-0.5">
+              <div className="text-sm text-[#8B93A7] mt-0.5">
                 Original Baseline: ₹18,42,600
               </div>
             </div>
@@ -163,7 +163,7 @@ export const ShockSandboxPage: React.FC = () => {
               <div className="text-xl font-bold font-mono-num">
                 {totalDifference >= 0 ? '+' : ''}₹{totalDifference.toLocaleString('en-IN')} ({pctChange}%)
               </div>
-              <div className="text-xs font-semibold">
+              <div className="text-sm font-semibold">
                 {totalDifference < 0 ? 'Estimated Stress Loss' : 'Capital Preserved'}
               </div>
             </div>

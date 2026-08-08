@@ -19,8 +19,11 @@ import { BrokerConsolePage } from './components/pages/BrokerConsolePage';
 import { ComplianceDashboardPage } from './components/pages/ComplianceDashboardPage';
 import { AdminPanelPage } from './components/pages/AdminPanelPage';
 import { SettingsPage } from './components/pages/SettingsPage';
+import { ProfilePage } from './components/pages/ProfilePage';
 import { AppSidebar } from './components/layout/AppSidebar';
 import { PremiumGate } from './components/layout/PremiumGate';
+import { ErrorBoundary } from './components/layout/ErrorBoundary';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import type { PageId } from './types';
 
 const PREMIUM_GATE_CONFIG: Record<string, { name: string; description: string; included: string[] }> = {
@@ -58,23 +61,28 @@ const PREMIUM_GATE_CONFIG: Record<string, { name: string; description: string; i
 };
 
 const PageRenderer: React.FC = () => {
-  const { currentPage, isPremiumGated, canAccess } = useApp();
+  const { currentPage, isPremiumGated, canAccess, userRecord } = useApp();
 
   // Check if current page is premium gated for this user
   if (isPremiumGated(currentPage as PageId)) {
     const config = PREMIUM_GATE_CONFIG[currentPage];
     if (config) {
+      // Distinguish expired trial vs never-subscribed free user
+      const isExpiredTrial = userRecord.plan === 'premium_trial';
       return (
-        <div className="min-h-screen bg-[#FAF8F5] flex text-[#0B1220] font-sans">
-          <AppSidebar />
-          <main className="flex-1 overflow-y-auto">
-            <PremiumGate
-              featureName={config.name}
-              featureDescription={config.description}
-              included={config.included}
-            />
-          </main>
-        </div>
+        <ProtectedRoute>
+          <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
+            <AppSidebar />
+            <main className="flex-1 overflow-y-auto">
+              <PremiumGate
+                featureName={config.name}
+                featureDescription={config.description}
+                included={config.included}
+                variant={isExpiredTrial ? 'trial_expired' : 'upgrade'}
+              />
+            </main>
+          </div>
+        </ProtectedRoute>
       );
     }
   }
@@ -97,27 +105,29 @@ const PageRenderer: React.FC = () => {
     case 'onboarding':
       return <OnboardingPage />;
     case 'dashboard':
-      return <DashboardPage />;
+      return <ProtectedRoute><DashboardPage /></ProtectedRoute>;
     case 'holdings':
-      return <HoldingsPage />;
+      return <ProtectedRoute><HoldingsPage /></ProtectedRoute>;
     case 'explainability':
-      return <ExplainabilityCenterPage />;
+      return <ProtectedRoute><ExplainabilityCenterPage /></ProtectedRoute>;
     case 'red-flags':
-      return <RedFlagsPage />;
+      return <ProtectedRoute><RedFlagsPage /></ProtectedRoute>;
     case 'shock-sandbox':
-      return <ShockSandboxPage />;
+      return <ProtectedRoute><ShockSandboxPage /></ProtectedRoute>;
     case 'peer-benchmark':
-      return <PeerBenchmarkingPage />;
+      return <ProtectedRoute><PeerBenchmarkingPage /></ProtectedRoute>;
     case 'retrospective':
-      return <RetrospectivePage />;
+      return <ProtectedRoute><RetrospectivePage /></ProtectedRoute>;
     case 'broker-console':
-      return <BrokerConsolePage />;
+      return <ProtectedRoute><BrokerConsolePage /></ProtectedRoute>;
     case 'compliance':
-      return <ComplianceDashboardPage />;
+      return <ProtectedRoute><ComplianceDashboardPage /></ProtectedRoute>;
     case 'admin':
-      return <AdminPanelPage />;
+      return <ProtectedRoute><AdminPanelPage /></ProtectedRoute>;
     case 'settings':
-      return <SettingsPage />;
+      return <ProtectedRoute><SettingsPage /></ProtectedRoute>;
+    case 'profile':
+      return <ProtectedRoute><ProfilePage /></ProtectedRoute>;
     default:
       return <HomePage />;
   }
@@ -126,7 +136,9 @@ const PageRenderer: React.FC = () => {
 export function App() {
   return (
     <AppProvider>
-      <PageRenderer />
+      <ErrorBoundary>
+        <PageRenderer />
+      </ErrorBoundary>
     </AppProvider>
   );
 }

@@ -7,7 +7,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 
 export const PeerBenchmarkingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex text-[#0B1220] font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
       <AppSidebar />
 
       <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
@@ -19,10 +19,10 @@ export const PeerBenchmarkingPage: React.FC = () => {
               <Users className="w-4 h-4" />
               <span>Anonymized Cohort Benchmarking</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0B1220] mt-1">
+            <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
               Peer Benchmarking
             </h1>
-            <p className="text-sm text-[#64748B] mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               Compare your asset allocation against anonymized investors in your age band (28–35 years) and income cohort.
             </p>
           </div>
@@ -34,7 +34,7 @@ export const PeerBenchmarkingPage: React.FC = () => {
 
         {/* Recharts Bar Comparison */}
         <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <h3 className="font-extrabold text-base text-[#0B1220] mb-4">
+          <h3 className="font-extrabold text-base text-[#14213D] mb-4">
             Asset Allocation (%) vs. Peer Cohort & Top Quartile Performers
           </h3>
 

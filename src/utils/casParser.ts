@@ -1,10 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { createWorker } from 'tesseract.js';
 import type { HoldingItem, RedFlagAlert } from '../types';
 
-// Set up PDF.js worker via CDN
+// Set up PDF.js worker using the bundled worker (always version-matched)
 if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 }
 
 export interface ParsedCasData {
@@ -31,7 +32,11 @@ export function maskPan(pan: string): string {
  * Extract text from PDF with position-aware grouping.
  * PDF.js gives items with x,y coords — we sort by Y then X to reconstruct reading order.
  */
-export async function extractTextFromPdf(file: File): Promise<string> {
+export async function extractTextFromPdf(
+  file: File,
+  onProgress?: (progress: number, message: string) => void
+): Promise<string> {
+  onProgress?.(10, 'Reading PDF structure...');
   try {
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
@@ -39,6 +44,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     const allPageTexts: string[] = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      onProgress?.(10 + Math.round((pageNum / pdf.numPages) * 30), `Extracting text from PDF page ${pageNum} of ${pdf.numPages}...`);
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
 
@@ -71,37 +77,61 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     return extracted;
   } catch (error) {
     console.warn('PDF.js extraction failed, falling back to OCR:', error);
-    try {
-        const worker: any = await createWorker();
+    onProgress?.(45, 'This is a scanned document, reading it may take a minute... Initializing OCR engine');
 
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let ocrText = '';
+    // 90-second timeout fallback for OCR recognition to prevent indefinite hangs
+    const ocrTimeoutMs = 90000;
+    let ocrTimer: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      ocrTimer = setTimeout(() => {
+        reject(new Error('OCR text recognition timed out after 90 seconds. Please upload a digital PDF.'));
+      }, ocrTimeoutMs);
+    });
 
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = Math.round(viewport.width);
-        canvas.height = Math.round(viewport.height);
-
-        await page.render({ canvas, canvasContext: context!, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/png');
-
-        const { data: { text } } = await worker.recognize(dataUrl);
-        ocrText += `\n--- PAGE ${pageNum} ---\n` + text;
-      }
-
-      await worker.terminate();
-      return ocrText;
-    } catch (ocrError) {
-      console.warn('OCR fallback failed:', ocrError);
+    const runOcr = async (): Promise<string> => {
+      const worker: any = await createWorker();
       try {
-        return await file.text();
-      } catch {
-        return '';
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let ocrText = '';
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const progressPct = 45 + Math.round((pageNum / pdf.numPages) * 50);
+          onProgress?.(
+            progressPct,
+            `This is a scanned document, reading page ${pageNum} of ${pdf.numPages}... Please hold on.`
+          );
+
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+
+          await page.render({ canvas, canvasContext: context!, viewport }).promise;
+          const dataUrl = canvas.toDataURL('image/png');
+
+          const { data: { text } } = await worker.recognize(dataUrl);
+          ocrText += `\n--- PAGE ${pageNum} ---\n` + text;
+        }
+
+        return ocrText;
+      } finally {
+        await worker.terminate();
       }
+    };
+
+    try {
+      const result = await Promise.race([runOcr(), timeoutPromise]);
+      clearTimeout(ocrTimer!);
+      return result;
+    } catch (ocrError) {
+      clearTimeout(ocrTimer!);
+      console.warn('OCR fallback failed:', ocrError);
+      throw new Error(
+        `OCR text extraction failed: ${ocrError instanceof Error ? ocrError.message : String(ocrError)}`
+      );
     }
   }
 }
@@ -120,13 +150,29 @@ function findNum(tokens: string[], index: number): number {
   return 0;
 }
 
+export class CasParsingError extends Error {
+  readonly cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = 'CasParsingError';
+    this.cause = cause;
+    Object.setPrototypeOf(this, CasParsingError.prototype);
+  }
+}
+
 // ─── Main Parser ─────────────────────────────────────────────────────────────
 
 export function parseCasText(rawText: string, fileName: string): ParsedCasData {
-  const isImageOrScanned = rawText.trim().length < 100;
-  const parsingEngine: 'TIER_1_STRUCTURED_PDF' | 'TIER_2_OCR_FALLBACK' = isImageOrScanned
-    ? 'TIER_2_OCR_FALLBACK'
-    : 'TIER_1_STRUCTURED_PDF';
+  try {
+    if (!rawText || typeof rawText !== 'string' || !rawText.trim()) {
+      throw new CasParsingError(`Empty or unreadable CAS text extracted from file "${fileName}".`);
+    }
+
+    const isImageOrScanned = rawText.trim().length < 100;
+    const parsingEngine: 'TIER_1_STRUCTURED_PDF' | 'TIER_2_OCR_FALLBACK' = isImageOrScanned
+      ? 'TIER_2_OCR_FALLBACK'
+      : 'TIER_1_STRUCTURED_PDF';
 
   let detectedIssuerTemplate: 'NSDL_DIGITAL' | 'CDSL_DIGITAL' | 'CAMS_KFINTECH' | 'VESTIQ_STANDARD' = 'VESTIQ_STANDARD';
   if (/NSDL/i.test(rawText)) detectedIssuerTemplate = 'NSDL_DIGITAL';
@@ -290,20 +336,27 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
 
   const detectedBrokers = Array.from(new Set(holdings.map(h => h.broker)));
 
-  return {
-    investorName,
-    pan,
-    maskedPan,
-    statementPeriod,
-    totalAssets,
-    holdingsCount: holdings.length,
-    detectedBrokers,
-    parsedHoldings: holdings,
-    redFlags,
-    parsingEngine,
-    detectedIssuerTemplate,
-    rawExtractedText: rawText.substring(0, 3000) // first 3000 chars for debug
-  };
+    return {
+      investorName,
+      pan,
+      maskedPan,
+      statementPeriod,
+      totalAssets,
+      holdingsCount: holdings.length,
+      detectedBrokers,
+      parsedHoldings: holdings,
+      redFlags,
+      parsingEngine,
+      detectedIssuerTemplate,
+      rawExtractedText: rawText.substring(0, 3000) // first 3000 chars for debug
+    };
+  } catch (err) {
+    if (err instanceof CasParsingError) throw err;
+    throw new CasParsingError(
+      `Failed to parse CAS statement text from file "${fileName}": ${err instanceof Error ? err.message : String(err)}`,
+      err
+    );
+  }
 }
 
 /**

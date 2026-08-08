@@ -22,7 +22,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
   const isStandalone = role === 'investor_free' || role === 'investor_premium';
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex text-[#0B1220] font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
       <AppSidebar />
 
       <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
@@ -34,10 +34,10 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <Lightbulb className="w-4 h-4" />
               <span>VestIQ Explainability Engine</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0B1220] mt-1">
+            <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
               Explainability Center
             </h1>
-            <p className="text-sm text-[#64748B] mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               Every portfolio score, yield metric, and risk tag translated into a plain-English causal chain.
             </p>
           </div>
@@ -49,7 +49,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
                 explainMode === 'simple'
                   ? 'bg-white text-[#C57D25] shadow-xs'
-                  : 'text-[#64748B] hover:text-[#0B1220]'
+                  : 'text-[#6B7280] hover:text-[#14213D]'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-[#C57D25]" />
@@ -60,8 +60,8 @@ export const ExplainabilityCenterPage: React.FC = () => {
               onClick={() => setExplainMode('technical')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
                 explainMode === 'technical'
-                  ? 'bg-white text-[#0B1220] shadow-xs'
-                  : 'text-[#64748B] hover:text-[#0B1220]'
+                  ? 'bg-white text-[#14213D] shadow-xs'
+                  : 'text-[#6B7280] hover:text-[#14213D]'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -83,7 +83,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                   selectedHoldingId === h.id
                     ? 'bg-[#FFF8EE] text-[#C57D25] border-[#C57D25] shadow-xs'
-                    : 'bg-white text-[#64748B] border-[#EDE9DF] hover:bg-[#FAF8F5]'
+                    : 'bg-white text-[#6B7280] border-[#EDE9DF] hover:bg-[#FAF8F5]'
                 }`}
               >
                 {h.name} ({h.portfolioWeight}%)
@@ -98,7 +98,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#F1EFE9]">
             <div>
               <div className="text-xs text-[#8B93A7] font-semibold uppercase tracking-wider">Causal Analysis for</div>
-              <h2 className="text-xl font-extrabold text-[#0B1220] mt-0.5">{selectedHolding.name}</h2>
+              <h2 className="text-xl font-extrabold text-[#14213D] mt-0.5">{selectedHolding.name}</h2>
             </div>
             <div className="text-right">
               <span className="text-xs text-[#8B93A7] font-mono">Weight in Portfolio</span>
@@ -117,10 +117,10 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-1">
                 Root Cause
               </div>
-              <h3 className="font-bold text-base text-[#0B1220] mb-2">
+              <h3 className="font-bold text-base text-[#14213D] mb-2">
                 {selectedHolding.causalChain.cause}
               </h3>
-              <p className="text-xs text-[#63451B] leading-relaxed">
+              <p className="text-sm text-[#63451B] leading-relaxed">
                 {explainMode === 'simple'
                   ? `You hold ₹${selectedHolding.currentValue.toLocaleString('en-IN')} in this single instrument via ${selectedHolding.broker}.`
                   : `Concentration metric calculated via Herfindahl-Hirschman Index (HHI) exceeding threshold limit.`
@@ -136,10 +136,10 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-1">
                 Transmission Mechanism
               </div>
-              <h3 className="font-bold text-base text-[#0B1220] mb-2">
+              <h3 className="font-bold text-base text-[#14213D] mb-2">
                 {selectedHolding.causalChain.mechanism}
               </h3>
-              <p className="text-xs text-[#63451B] leading-relaxed">
+              <p className="text-sm text-[#63451B] leading-relaxed">
                 {explainMode === 'simple'
                   ? `When repo interest rates rise, institutional investors demand higher yields from real estate trusts, driving prices down.`
                   : `Yield spread sensitivity duration coefficient calculated at 3.42 relative to RBI 10Y Benchmark G-Sec.`
@@ -158,7 +158,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <h3 className="font-bold text-base text-[#991B1B] mb-2">
                 {selectedHolding.causalChain.impact}
               </h3>
-              <p className="text-xs text-[#7F1D1D] leading-relaxed">
+              <p className="text-sm text-[#7F1D1D] leading-relaxed">
                 {explainMode === 'simple'
                   ? `If central bank rates increase by 100 bps, your portfolio mark-to-market value could temporarily drop by ~₹1,10,000.`
                   : `VaR (Value at Risk) 95% confidence stress interval models a max drawdown of 14.8%.`
@@ -169,10 +169,10 @@ export const ExplainabilityCenterPage: React.FC = () => {
           </div>
 
           {/* Explainability Mode Indicator Banner */}
-          <div className="mt-8 pt-6 border-t border-[#F1EFE9] flex items-center justify-between text-xs text-[#64748B]">
+          <div className="mt-8 pt-6 border-t border-[#F1EFE9] flex items-center justify-between text-sm text-[#6B7280]">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-[#C57D25]" />
-              <span>Current mode: <strong className="text-[#0B1220]">{explainMode === 'simple' ? 'Plain-English Retail Narrative' : 'SEBI Institutional Risk Metric'}</strong></span>
+              <span>Current mode: <strong className="text-[#14213D]">{explainMode === 'simple' ? 'Plain-English Retail Narrative' : 'SEBI Institutional Risk Metric'}</strong></span>
             </div>
             <div className="font-semibold text-[#C57D25]">
               Suitability Score: {selectedHolding.suitabilityScore}/100

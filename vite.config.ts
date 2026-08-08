@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite'
 // Updated: 2026-08-04 - Force Vite cache refresh
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ['pdf-lib'],
+  },
   server: {
     proxy: {
       '/api': {

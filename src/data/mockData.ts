@@ -1,4 +1,4 @@
-import type { HoldingItem, RedFlagAlert, ClientProfile } from '../types';
+import type { HoldingItem, RedFlagAlert, ClientProfile, SuitabilityReportRecord, HealthScoreEvent } from '../types';
 
 export const INITIAL_HOLDINGS: HoldingItem[] = [
   {
@@ -146,6 +146,7 @@ export const MOCK_CLIENTS: ClientProfile[] = [
     healthScore: 72,
     flagCount: 1,
     riskProfile: 'Moderate',
+    investmentTimeline: '18-36 Months (Medium Horizon)',
     topFlag: 'Liquidity Mismatch on Grid InvIT',
     lastUpdated: 'Today, 09:30 AM',
     assignedRM: 'Amit Verma (Senior Wealth Lead)'
@@ -159,6 +160,7 @@ export const MOCK_CLIENTS: ClientProfile[] = [
     healthScore: 58,
     flagCount: 3,
     riskProfile: 'Conservative',
+    investmentTimeline: '12 Months (Short Horizon)',
     topFlag: 'High-Yield Junk Bond Exposure (Unrated)',
     lastUpdated: 'Yesterday',
     assignedRM: 'Amit Verma (Senior Wealth Lead)'
@@ -172,6 +174,7 @@ export const MOCK_CLIENTS: ClientProfile[] = [
     healthScore: 89,
     flagCount: 0,
     riskProfile: 'Aggressive',
+    investmentTimeline: '5+ Years (Long Horizon)',
     topFlag: 'None - Clean Portfolio',
     lastUpdated: '3 days ago',
     assignedRM: 'Amit Verma (Senior Wealth Lead)'
@@ -185,6 +188,7 @@ export const MOCK_CLIENTS: ClientProfile[] = [
     healthScore: 61,
     flagCount: 2,
     riskProfile: 'Moderate',
+    investmentTimeline: '24 Months (Medium Horizon)',
     topFlag: 'Mis-sold Structured Product with 5-year lock-in',
     lastUpdated: '1 week ago',
     assignedRM: 'Sonia Mehta (Compliance RM)'
@@ -205,3 +209,161 @@ export const RETROSPECTIVE_SIM_DATA = [
   { month: 'Apr 2025', actualValue: 1790000, optimizedValue: 1960000, benchmarkNifty: 1820000 },
   { month: 'Jul 2026', actualValue: 1842600, optimizedValue: 2085000, benchmarkNifty: 1910000 }
 ];
+
+export const MOCK_HEALTH_SCORE_EVENTS: HealthScoreEvent[] = [
+  {
+    id: 'hse-3',
+    userId: 'user_1',
+    timestamp: '2026-08-04T10:30:00Z',
+    previousScore: 78,
+    newScore: 72,
+    delta: -6,
+    triggerType: 'new_holding',
+    reasonObject: {
+      factor: 'Concentration Risk',
+      penaltyOrBonus: -6,
+      reason: 'New REIT purchase increased real estate & infrastructure concentration to 38.7%, exceeding the recommended 25% threshold.'
+    }
+  },
+  {
+    id: 'hse-2',
+    userId: 'user_1',
+    timestamp: '2026-07-20T14:15:00Z',
+    previousScore: 64,
+    newScore: 78,
+    delta: 14,
+    triggerType: 'flag_resolved',
+    reasonObject: {
+      factor: 'Debt Maturity Mismatch',
+      penaltyOrBonus: 14,
+      reason: 'Resolved lock-in mismatch by reallocating high-risk unrated bonds into 3-Year G-Secs matching stated liquidity horizon.'
+    }
+  },
+  {
+    id: 'hse-1',
+    userId: 'user_1',
+    timestamp: '2026-06-10T09:00:00Z',
+    previousScore: 52,
+    newScore: 64,
+    delta: 12,
+    triggerType: 'holding_removed',
+    reasonObject: {
+      factor: 'Credit Quality Upgrade',
+      penaltyOrBonus: 12,
+      reason: 'Exited speculative unrated corporate debentures, reducing portfolio credit default exposure.'
+    }
+  }
+];
+
+
+export const MOCK_SUITABILITY_REPORTS: SuitabilityReportRecord[] = [
+  {
+    id: 'sr-101',
+    clientId: 'c1',
+    clientName: 'Rajesh Kumar (You)',
+    casPan: 'ABCDE1234F',
+    generatedBy: 'Amit Verma (RM)',
+    generatedAt: '2026-08-04 10:15 AM',
+    status: 'acknowledged',
+    reviewedBy: 'Neha Iyer (Compliance)',
+    reviewedAt: '2026-08-04 11:30 AM',
+    healthScore: 72,
+    redFlagsCount: 1,
+    riskProfile: 'Moderate',
+    investmentTimeline: '18-36 Months (Medium Horizon)',
+    totalValue: 1842600,
+    allocationSummary: {
+      equitiesPct: 44.5,
+      mfsPct: 0.0,
+      bondsPct: 16.8,
+      reitsPct: 38.7
+    },
+    healthScoreFactors: [
+      { factor: 'Single REIT Concentration', penaltyOrBonus: -12, reason: '40% concentrated in Mindspace REIT' },
+      { factor: 'Lock-in Horizon Mismatch', penaltyOrBonus: -10, reason: 'Grid InvIT 36-mo lockin vs 18-mo horizon' },
+      { factor: 'No Panic Selling History', penaltyOrBonus: +8, reason: 'Consistent long-term holding pattern' }
+    ],
+    redFlagsList: [
+      {
+        title: 'Liquidity mismatch on Grid InvIT',
+        category: 'liquidity_mismatch',
+        description: 'Holding has 3-year lock-in vs stated 18-month liquidity horizon.',
+        suggestedAction: 'Reallocate ₹50,000 to liquid G-Secs.',
+        sebiRuleRef: 'SEBI Circular CIR/IMD/DF/21/2012'
+      }
+    ]
+  },
+  {
+    id: 'sr-102',
+    clientId: 'c2',
+    clientName: 'Priya Sharma',
+    casPan: 'FGHIJ5678K',
+    generatedBy: 'Amit Verma (RM)',
+    generatedAt: '2026-08-05 02:45 PM',
+    status: 'generated',
+    healthScore: 58,
+    redFlagsCount: 3,
+    riskProfile: 'Conservative',
+    investmentTimeline: '12 Months (Short Horizon)',
+    totalValue: 4250000,
+    allocationSummary: {
+      equitiesPct: 30.0,
+      mfsPct: 20.0,
+      bondsPct: 35.0,
+      reitsPct: 15.0
+    },
+    healthScoreFactors: [
+      { factor: 'Unrated Junk Bond Exposure', penaltyOrBonus: -20, reason: 'Conservative profile holds unrated high-yield debt' },
+      { factor: 'Short Horizon Lock-in', penaltyOrBonus: -14, reason: 'Lock-in exceeds 12-month stated requirement' }
+    ],
+    redFlagsList: [
+      {
+        title: 'High-Yield Junk Bond Exposure (Unrated)',
+        category: 'yield_trap',
+        description: 'Client profile is Conservative, but holds unrated high-yield corporate debentures.',
+        suggestedAction: 'Exit junk bond exposure and transition into AAA PSU bonds.',
+        sebiRuleRef: 'SEBI Debt Product Suitability Guidelines'
+      },
+      {
+        title: 'Over-concentrated Non-convertible Debentures',
+        category: 'concentration_risk',
+        description: '35% exposure in non-tier 1 corporate debt.',
+        suggestedAction: 'Diversify across sovereign debt instruments.',
+        sebiRuleRef: 'SEBI Portfolio Diversification Rule'
+      }
+    ]
+  },
+  {
+    id: 'sr-103',
+    clientId: 'c4',
+    clientName: 'Ananya Deshmukh',
+    casPan: 'QRSTU3456V',
+    generatedBy: 'Sonia Mehta (Compliance RM)',
+    generatedAt: '2026-08-06 09:10 AM',
+    status: 'generated',
+    healthScore: 61,
+    redFlagsCount: 2,
+    riskProfile: 'Moderate',
+    investmentTimeline: '24 Months (Medium Horizon)',
+    totalValue: 3100000,
+    allocationSummary: {
+      equitiesPct: 50.0,
+      mfsPct: 15.0,
+      bondsPct: 20.0,
+      reitsPct: 15.0
+    },
+    healthScoreFactors: [
+      { factor: 'Structured Product Lock-in', penaltyOrBonus: -15, reason: '5-year lock-in product mis-sold on 24-month horizon' }
+    ],
+    redFlagsList: [
+      {
+        title: 'Mis-sold Structured Product with 5-year lock-in',
+        category: 'suitability',
+        description: 'Complex derivative-linked structure sold without clear horizon disclosure.',
+        suggestedAction: 'Initiate broker review and restructuring option.',
+        sebiRuleRef: 'SEBI Mis-Selling & Suitability Framework'
+      }
+    ]
+  }
+];
+

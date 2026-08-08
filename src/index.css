@@ -4,61 +4,75 @@
    VestIQ Design System — Global Styles
    ============================================================ */
 
-/* Google Sans via @font-face (no @import url needed — loaded in index.html) */
-@font-face {
-  font-family: 'Google Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3Kwp5MKg.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Google Sans';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3KwjpMKg.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Google Sans';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/googlesans/v58/4UaGrENHsxJlGDuGo1OIlL3KwiIMKg.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Google Sans Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/googlesanstext/v21/5aUu9-D82nhh56KU0SfdMPKJ7w81wA.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Google Sans Text';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/googlesanstext/v21/5aUu9-D82nhh56KU0SfdMPKJ7w9TwA.woff2') format('woff2');
+/* ---- CSS Custom Properties — Single source of truth ---- */
+:root {
+  /* ── Backgrounds ── */
+  --bg-page:         #FAF8F5;
+  --bg-surface:      #FFFFFF;
+  --bg-card-subtle:  #F6F4ED;
+
+  /* ── Brand palette ── */
+  --color-gold:          #C57D25;
+  --color-gold-hover:    #B06C19;
+  --color-emerald:       #2BB673;
+  --color-emerald-bg:    #E6F4EA;
+  --color-red:           #E8543D;
+  --color-red-bg:        #FDF2F2;
+
+  /* ── Typography — colors (WCAG AA Compliant) ── */
+  --color-ink:           #14213D;   /* primary text — 16.5:1 contrast ✅ */
+  --color-ink-secondary: #6B7280;   /* muted text — 5.0:1 contrast ✅ */
+
+  /* ── Font families ── */
+  --font-heading: 'General Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+
+  /* ── Standard Type Scale ── */
+  --text-hero:       44px;
+  --text-h2:         30px;
+  --text-h3:         19px;
+  --text-body:       14px;
+  --text-number:     24px;
+  --text-nav:        14px;
+  --text-btn:        14px;
+  --text-caption:    13px;
 }
 
-/* ---- CSS Custom Properties ---- */
-:root {
-  --bg-page: #FAF8F5;
-  --bg-surface: #FFFFFF;
-  --bg-card-subtle: #F6F4ED;
-  --color-primary-gold: #C57D25;
-  --color-primary-gold-hover: #B06C19;
-  --color-ink: #0B1220;
-  --color-ink-muted: #64748B;
-  --color-red-flag: #E8543D;
-  --color-red-flag-bg: #FDF2F2;
-  --color-emerald: #2BB673;
-  --color-emerald-bg: #E6F4EA;
+/* ── Tailwind v4 @theme extension ───────────────────────────────────────────── */
+@theme {
+  /* Fonts */
+  --font-family-heading: 'General Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-family-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-family-mono:    'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  --font-family-sans:    'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Custom font-size tokens */
+  --font-size-hero:    44px;
+  --font-size-h2:      30px;
+  --font-size-h3:      19px;
+  --font-size-body:    14px;
+  --font-size-number:  24px;
+  --font-size-nav:     14px;
+  --font-size-btn:     14px;
+  --font-size-caption: 13px;
+
+  /* Color tokens */
+  --color-ink:           #14213D;
+  --color-ink-secondary: #6B7280;
+  --color-gold:          #C57D25;
+  --color-gold-hover:    #B06C19;
+  --color-emerald:       #2BB673;
+  --color-red-flag:      #E8543D;
 }
 
 /* ---- Global Reset + Base ---- */
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html, body {
@@ -68,22 +82,39 @@ html, body {
 }
 
 body {
-  background-color: #FAF8F5;
-  background-image: url('/doodle-pattern.svg');
-  background-size: 500px 375px;
-  background-repeat: repeat;
-  background-position: top left;
-  background-attachment: fixed;
-  color: #0B1220;
-  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--color-ink);
+  font-family: var(--font-body);
   font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6, nav, button, input, select, textarea, table, th, td {
-  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
+/* ── Heading defaults ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-ink);
 }
+
+/* ── Interactive & Nav chrome ── */
+nav, button, input, select, textarea {
+  font-family: var(--font-body);
+}
+
+/* Tabular numeric font styling for portfolio figures, currencies, and metrics */
+.font-mono-num {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+/* ── Utility Aliases ── */
+.font-heading { font-family: var(--font-heading) !important; }
+.font-body    { font-family: var(--font-body) !important; }
+.text-ink     { color: var(--color-ink) !important; }
+.text-ink-secondary { color: var(--color-ink-secondary) !important; }
+.font-sans    { font-family: var(--font-body) !important; }
 
 /* ---- App Root ---- */
 #root {
@@ -98,23 +129,9 @@ h1, h2, h3, h4, h5, h6, nav, button, input, select, textarea, table, th, td {
 ::-webkit-scrollbar-thumb { background: #D4CEBF; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #B5AD9A; }
 
-/* ---- Doodle pattern: show on all full-page containers ---- */
-/* Tailwind's bg-[#FAF8F5] would cover the body doodle, so we restore it here */
-.min-h-screen {
-  background-color: transparent !important;
-  background-image: url('/doodle-pattern.svg');
-  background-size: 500px 375px;
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-position: top left;
-}
-
-
-/* ---- Sidebar — always solid background, never doodle ---- */
+/* ---- Sidebar ---- */
 aside {
-  background-image: none !important;
-  background-color: #F7F5EE !important;
-  background-attachment: initial !important;
+  background-color: #F7F5EE;
 }
 
 /* ---- Shadows ---- */
@@ -123,12 +140,6 @@ aside {
 }
 .shadow-vestiq-lg {
   box-shadow: 0 12px 32px -4px rgba(197, 125, 37, 0.08), 0 4px 12px -2px rgba(11, 18, 32, 0.04);
-}
-
-/* ---- Font mono num ---- */
-.font-mono-num {
-  font-family: 'Google Sans', 'Google Sans Text', ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: "tnum" 1;
 }
 
 /* ---- 3D Flip Card Utilities ---- */
@@ -162,8 +173,79 @@ aside {
 /* ---- Spinner animation ---- */
 @keyframes spinSlow {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
 .spin-slow {
   animation: spinSlow 4s linear infinite;
+}
+
+/* ---- Scroll-Reveal Animations ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.reveal.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-28px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.reveal-left.reveal-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.93);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.reveal-scale.reveal-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Stagger delays for grouped child elements */
+.stagger-1 { transition-delay: 0ms; }
+.stagger-2 { transition-delay: 80ms; }
+.stagger-3 { transition-delay: 160ms; }
+.stagger-4 { transition-delay: 240ms; }
+
+/* ---- Navbar scroll transition ---- */
+.navbar-scrolled {
+  background-color: rgba(250, 248, 245, 0.97) !important;
+  box-shadow: 0 2px 16px -2px rgba(11, 18, 32, 0.10) !important;
+  border-bottom-color: #D4CEBF !important;
+}
+.navbar-top {
+  background-color: rgba(250, 248, 245, 0.0) !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---- Animated counter pulse ---- */
+@keyframes counterPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.counter-pop {
+  animation: counterPop 0.3s ease;
+}
+
+/* ---- Trust badge glow ---- */
+.trust-badge {
+  position: relative;
+  overflow: hidden;
+}
+.trust-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(197,125,37,0.06) 0%, transparent 60%);
+  pointer-events: none;
 }

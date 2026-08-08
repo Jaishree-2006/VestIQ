@@ -7,7 +7,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 
 export const RetrospectivePage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex text-[#0B1220] font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
       <AppSidebar />
 
       <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
@@ -15,14 +15,14 @@ export const RetrospectivePage: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#EDE9DF]">
           <div>
-            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#0B1220]">
+            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#14213D]">
               <History className="w-4 h-4" />
               <span>Behavioral Education Engine</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0B1220] mt-1">
+            <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
               Retrospective Simulator ("What If" Timeline)
             </h1>
-            <p className="text-sm text-[#64748B] mt-1">
+            <p className="text-sm text-[#6B7280] mt-1">
               Analyze how historical allocation adjustments over the past 24 months would have protected your wealth.
             </p>
           </div>
@@ -30,7 +30,7 @@ export const RetrospectivePage: React.FC = () => {
 
         {/* Recharts Timeline */}
         <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <h3 className="font-extrabold text-base text-[#0B1220] mb-4">
+          <h3 className="font-extrabold text-base text-[#14213D] mb-4">
             Actual Portfolio Trajectory vs. Risk-Adjusted Optimal Strategy
           </h3>
 
@@ -55,14 +55,14 @@ export const RetrospectivePage: React.FC = () => {
           <div className="bg-white p-6 rounded-3xl border border-[#EDE9DF] shadow-xs">
             <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-2">Simulated Outcome</div>
             <h4 className="text-2xl font-extrabold font-mono-num text-[#2BB673] mb-2">+₹2,42,400 Additional Value</h4>
-            <p className="text-xs text-[#64748B] leading-relaxed">
+            <p className="text-xs text-[#6B7280] leading-relaxed">
               If you had rebalanced 15% out of REIT concentration into Sovereign Bonds in July 2024, your total portfolio value today would be <strong>₹20,85,000</strong> instead of ₹18,42,600.
             </p>
           </div>
 
           <div className="bg-[#E6F4EA] p-6 rounded-3xl border border-[#A7F3D0]">
             <div className="text-xs font-bold uppercase tracking-wider text-[#2BB673] mb-2">Behavioral Insight</div>
-            <h4 className="text-lg font-bold text-[#0B1220] mb-2">Constructive Forward Guidance</h4>
+            <h4 className="text-lg font-bold text-[#14213D] mb-2">Constructive Forward Guidance</h4>
             <p className="text-xs text-[#15803D] leading-relaxed">
               This simulator is designed to guide future asset allocation decisions rather than cause regret. Small reallocations in rate-sensitive cycles compound into significant long-term stability.
             </p>

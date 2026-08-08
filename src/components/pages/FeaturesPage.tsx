@@ -55,7 +55,7 @@ export const FeaturesPage: React.FC = () => {
     {
       id: 'retro',
       title: 'Retrospective Simulator',
-      icon: <History className="w-6 h-6 text-[#0B1220]" />,
+      icon: <History className="w-6 h-6 text-[#14213D]" />,
       desc: 'Historical "What If" timeline tool that demonstrates how behavioral adjustments over the past 24 months preserved capital.',
       example: 'Rebalancing 15% out of REIT in 2024 would have increased net returns by +₹2,42,400.',
       action: 'Run Retrospective',
@@ -64,7 +64,7 @@ export const FeaturesPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-[#0B1220] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] text-[#14213D] flex flex-col font-sans">
       <Navbar />
 
       <section className="py-16 max-w-6xl mx-auto px-4 w-full">
@@ -72,10 +72,10 @@ export const FeaturesPage: React.FC = () => {
           <span className="text-xs font-bold uppercase tracking-wider text-[#C57D25] bg-[#FFF8EE] px-3 py-1 rounded-full border border-[#F7E5C8]">
             Engine Deep Dive
           </span>
-          <h1 className="text-4xl font-extrabold text-[#0B1220] mt-3">
+          <h1 className="text-4xl font-extrabold text-[#14213D] mt-3">
             The 6 Core Analytics Engines Driving VestIQ
           </h1>
-          <p className="text-base text-[#64748B] mt-3">
+          <p className="text-base text-[#6B7280] mt-3">
             Designed specifically to eliminate investor confusion and empower retail portfolios with plain-English clarity.
           </p>
         </div>
@@ -90,8 +90,8 @@ export const FeaturesPage: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-[#FFF8EE] flex items-center justify-center mb-4 border border-[#F7E5C8]">
                   {engine.icon}
                 </div>
-                <h3 className="text-xl font-extrabold text-[#0B1220] mb-2">{engine.title}</h3>
-                <p className="text-sm text-[#64748B] leading-relaxed mb-4">{engine.desc}</p>
+                <h3 className="text-xl font-extrabold text-[#14213D] mb-2">{engine.title}</h3>
+                <p className="text-sm text-[#6B7280] leading-relaxed mb-4">{engine.desc}</p>
                 
                 <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#EDE9DF] mb-6">
                   <div className="text-[11px] text-[#8B93A7] font-bold uppercase tracking-wider mb-1">Explainability Example</div>
