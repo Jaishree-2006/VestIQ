@@ -87,7 +87,7 @@ async function upsertProfile(user, userSupabaseClient) {
   }, { onConflict: 'id' });
 }
 
-const isLocalDemoMode = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || process.env.DEMO_MODE === 'true';
+const isLocalDemoMode = String(process.env.DEMO_MODE || process.env.VITE_DEMO_MODE || '').toLowerCase() === 'true';
 
 async function getUserFromRequest(req) {
   const auth = req.headers.authorization || '';

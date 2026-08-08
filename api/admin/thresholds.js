@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '').trim() : authHeader.trim();
-  const isDemoMode = token === 'demo-admin-token' || String(process.env.VITE_DEMO_MODE || '').toLowerCase() === 'true';
+  const isDemoMode = token === 'demo-admin-token' || String(process.env.VITE_DEMO_MODE || process.env.DEMO_MODE || '').toLowerCase() === 'true';
 
   if (!isDemoMode && !token) {
     return res.status(401).json({ error: 'Missing authorization token.' });

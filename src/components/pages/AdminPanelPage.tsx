@@ -41,7 +41,7 @@ export const AdminPanelPage: React.FC = () => {
   const getAdminAccessToken = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData?.session?.access_token || (sessionData as any)?.access_token;
-    const isDemoMode = import.meta.env.DEV || String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true';
+    const isDemoMode = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true';
     return accessToken || (isDemoMode ? 'demo-admin-token' : null);
   };
 
