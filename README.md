@@ -190,14 +190,6 @@ VestIQ helps convert raw financial documents into:
 
 ---
 
-## Built for
-
-Securities Market TechSprint @ GFF 2026
-
-This project is intended to demonstrate how AI-assisted portfolio intelligence, risk explainability, and document-driven compliance workflows can be operationalized in the financial services domain.
-
----
-
 ## Status
 
 This project is currently a working product prototype / demo experience focused on:
@@ -207,7 +199,3 @@ This project is currently a working product prototype / demo experience focused 
 - compliance-aware investor workflows
 
 ---
-
-## License
-
-This project is for demo and innovation evaluation purposes as part of the GFF 2026 Securities Market TechSprint.
