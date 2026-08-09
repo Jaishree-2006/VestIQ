@@ -1,4 +1,9 @@
 # VestIQ
+## Demo Video
+
+[![Watch Demo](https://img.youtube.com/vi/5Dt0RzN_ywo/hqdefault.jpg)](https://youtu.be/5Dt0RzN_ywo)
+
+Click the image above to watch the demo video.
 ## Portfolio Intelligence for Retail Investors and Brokers in the Indian Securities Market
 
 Built for the Securities Market TechSprint @ GFF 2026
