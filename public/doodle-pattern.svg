@@ -1,0 +1,536 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <style>
+      .d { fill: none; stroke: #C57D25; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.35; }
+      .df { fill: #C57D25; opacity: 0.2; stroke: none; }
+      .dt { fill: #C57D25; opacity: 0.25; font-family: monospace; font-size: 7px; font-weight: bold; }
+    </style>
+  </defs>
+
+  <!-- ===== CANDLESTICK CHARTS ===== -->
+  <!-- Chart 1 -->
+  <g transform="translate(20,25)">
+    <line class="d" x1="4" y1="0" x2="4" y2="18"/>
+    <rect class="d" x="2" y="4" width="4" height="8"/>
+    <line class="d" x1="12" y1="2" x2="12" y2="20"/>
+    <rect class="d" x="10" y="6" width="4" height="10"/>
+    <line class="d" x1="20" y1="1" x2="20" y2="14"/>
+    <rect class="d" x="18" y="4" width="4" height="7"/>
+    <line class="d" x1="28" y1="3" x2="28" y2="18"/>
+    <rect class="d" x="26" y="7" width="4" height="9"/>
+    <line class="d" x1="36" y1="0" x2="36" y2="16"/>
+    <rect class="d" x="34" y="3" width="4" height="8"/>
+  </g>
+
+  <!-- Chart 2 -->
+  <g transform="translate(350,50)">
+    <line class="d" x1="4" y1="2" x2="4" y2="16"/>
+    <rect class="d" x="2" y="5" width="4" height="8"/>
+    <line class="d" x1="12" y1="0" x2="12" y2="18"/>
+    <rect class="d" x="10" y="4" width="4" height="10"/>
+    <line class="d" x1="20" y1="3" x2="20" y2="15"/>
+    <rect class="d" x="18" y="6" width="4" height="6"/>
+    <line class="d" x1="28" y1="1" x2="28" y2="17"/>
+    <rect class="d" x="26" y="5" width="4" height="9"/>
+  </g>
+
+  <!-- Chart 3 -->
+  <g transform="translate(650,180)">
+    <line class="d" x1="4" y1="1" x2="4" y2="17"/>
+    <rect class="d" x="2" y="4" width="4" height="9"/>
+    <line class="d" x1="12" y1="2" x2="12" y2="19"/>
+    <rect class="d" x="10" y="6" width="4" height="10"/>
+    <line class="d" x1="20" y1="0" x2="20" y2="14"/>
+    <rect class="d" x="18" y="3" width="4" height="7"/>
+    <line class="d" x1="28" y1="2" x2="28" y2="18"/>
+    <rect class="d" x="26" y="5" width="4" height="11"/>
+  </g>
+
+  <!-- Chart 4 -->
+  <g transform="translate(140,400)">
+    <line class="d" x1="4" y1="0" x2="4" y2="18"/>
+    <rect class="d" x="2" y="5" width="4" height="8"/>
+    <line class="d" x1="12" y1="3" x2="12" y2="20"/>
+    <rect class="d" x="10" y="7" width="4" height="9"/>
+    <line class="d" x1="20" y1="2" x2="20" y2="16"/>
+    <rect class="d" x="18" y="5" width="4" height="7"/>
+    <line class="d" x1="28" y1="1" x2="28" y2="17"/>
+    <rect class="d" x="26" y="4" width="4" height="9"/>
+    <line class="d" x1="36" y1="0" x2="36" y2="15"/>
+    <rect class="d" x="34" y="3" width="4" height="8"/>
+  </g>
+
+  <!-- Chart 5 -->
+  <g transform="translate(500,320)">
+    <line class="d" x1="4" y1="2" x2="4" y2="18"/>
+    <rect class="d" x="2" y="6" width="4" height="8"/>
+    <line class="d" x1="12" y1="0" x2="12" y2="16"/>
+    <rect class="d" x="10" y="4" width="4" height="9"/>
+    <line class="d" x1="20" y1="3" x2="20" y2="19"/>
+    <rect class="d" x="18" y="7" width="4" height="9"/>
+    <line class="d" x1="28" y1="1" x2="28" y2="15"/>
+    <rect class="d" x="26" y="4" width="4" height="7"/>
+  </g>
+
+  <!-- ===== LINE CHARTS / TREND ===== -->
+  <!-- Upward line chart 1 -->
+  <g transform="translate(70,80)">
+    <polyline class="d" points="0,24 8,18 16,20 24,12 32,8 40,10 48,4 56,0"/>
+    <line class="d" x1="0" y1="26" x2="60" y2="26"/>
+    <line class="d" x1="0" y1="26" x2="0" y2="0"/>
+  </g>
+
+  <!-- Upward line chart 2 -->
+  <g transform="translate(270,150)">
+    <polyline class="d" points="0,28 10,22 20,24 30,14 40,10 50,12 60,5 70,0"/>
+    <line class="d" x1="0" y1="30" x2="72" y2="30"/>
+    <line class="d" x1="0" y1="30" x2="0" y2="0"/>
+  </g>
+
+  <!-- Downward line chart -->
+  <g transform="translate(450,420)">
+    <polyline class="d" points="0,0 10,6 20,4 30,12 40,16 50,14 60,22 70,28"/>
+    <line class="d" x1="0" y1="30" x2="72" y2="30"/>
+    <line class="d" x1="0" y1="30" x2="0" y2="0"/>
+  </g>
+
+  <!-- Bar chart -->
+  <g transform="translate(580,60)">
+    <rect class="d" x="0" y="20" width="8" height="16"/>
+    <rect class="d" x="12" y="12" width="8" height="24"/>
+    <rect class="d" x="24" y="6" width="8" height="30"/>
+    <rect class="d" x="36" y="14" width="8" height="22"/>
+    <rect class="d" x="48" y="2" width="8" height="34"/>
+    <line class="d" x1="0" y1="36" x2="60" y2="36"/>
+  </g>
+
+  <!-- Bar chart 2 -->
+  <g transform="translate(60,480)">
+    <rect class="d" x="0" y="16" width="7" height="16"/>
+    <rect class="d" x="10" y="8" width="7" height="24"/>
+    <rect class="d" x="20" y="4" width="7" height="28"/>
+    <rect class="d" x="30" y="12" width="7" height="20"/>
+    <rect class="d" x="40" y="0" width="7" height="32"/>
+    <line class="d" x1="0" y1="32" x2="52" y2="32"/>
+  </g>
+
+  <!-- ===== PIE CHARTS ===== -->
+  <!-- Pie 1 -->
+  <g transform="translate(200,30)">
+    <circle class="d" cx="16" cy="16" r="16"/>
+    <line class="d" x1="16" y1="0" x2="16" y2="16"/>
+    <path class="d" d="M16,16 L32,16 A16,16 0 0,0 16,0 Z"/>
+    <line class="d" x1="16" y1="16" x2="27,5" y2="6.5"/>
+  </g>
+
+  <!-- Pie 2 -->
+  <g transform="translate(0,340)">
+    <circle class="d" cx="18" cy="18" r="18"/>
+    <line class="d" x1="18" y1="0" x2="18" y2="18"/>
+    <path class="d" d="M18,18 L36,18 A18,18 0 0,0 18,0 Z"/>
+    <path class="d" d="M18,18 L18,36 A18,18 0 0,1 0,18 Z"/>
+  </g>
+
+  <!-- Pie 3 -->
+  <g transform="translate(730,350)">
+    <circle class="d" cx="16" cy="16" r="16"/>
+    <line class="d" x1="16" y1="0" x2="16" y2="16"/>
+    <line class="d" x1="16" y1="16" x2="30" y2="25"/>
+    <path class="d" d="M16,16 L32,16 A16,16 0 0,0 27,3 Z"/>
+  </g>
+
+  <!-- Pie 4 -->
+  <g transform="translate(320,470)">
+    <circle class="d" cx="18" cy="18" r="18"/>
+    <line class="d" x1="18" y1="0" x2="18" y2="18"/>
+    <line class="d" x1="18" y1="18" x2="36" y2="18"/>
+    <path class="d" d="M18,18 L18,36 A18,18 0 0,0 36,18 Z"/>
+  </g>
+
+  <!-- ===== DOLLAR SIGNS ===== -->
+  <g transform="translate(160,60)">
+    <circle class="d" cx="13" cy="13" r="13"/>
+    <text class="dt" x="8" y="18">$</text>
+  </g>
+  <g transform="translate(680,90)">
+    <circle class="d" cx="13" cy="13" r="13"/>
+    <text class="dt" x="8" y="18">$</text>
+  </g>
+  <g transform="translate(300,360)">
+    <circle class="d" cx="13" cy="13" r="13"/>
+    <text class="dt" x="8" y="18">$</text>
+  </g>
+  <g transform="translate(500,200)">
+    <circle class="d" cx="10" cy="10" r="10"/>
+    <text class="dt" x="6" y="14">$</text>
+  </g>
+  <g transform="translate(40,200)">
+    <circle class="d" cx="10" cy="10" r="10"/>
+    <text class="dt" x="6" y="14">$</text>
+  </g>
+  <g transform="translate(720,480)">
+    <circle class="d" cx="12" cy="12" r="12"/>
+    <text class="dt" x="7" y="17">$</text>
+  </g>
+
+  <!-- ===== PERCENTAGE SIGNS ===== -->
+  <text class="dt" x="440" y="30" style="font-size:16px; opacity:0.3">%</text>
+  <text class="dt" x="120" y="330" style="font-size:16px; opacity:0.3">%</text>
+  <text class="dt" x="620" y="280" style="font-size:14px; opacity:0.25">%</text>
+  <text class="dt" x="240" y="530" style="font-size:16px; opacity:0.3">%</text>
+  <text class="dt" x="760" y="140" style="font-size:14px; opacity:0.3">%</text>
+
+  <!-- ===== AI CIRCLE BADGE ===== -->
+  <g transform="translate(525,95)">
+    <circle class="d" cx="18" cy="18" r="18"/>
+    <circle class="d" cx="18" cy="18" r="14"/>
+    <text class="dt" x="10" y="22" style="font-size:9px;font-weight:bold">AI</text>
+  </g>
+  <g transform="translate(200,290)">
+    <circle class="d" cx="16" cy="16" r="16"/>
+    <circle class="d" cx="16" cy="16" r="12"/>
+    <text class="dt" x="9" y="20" style="font-size:8px;font-weight:bold">AI</text>
+  </g>
+
+  <!-- ===== MONEY BAGS ===== -->
+  <g transform="translate(480,470)">
+    <ellipse class="d" cx="16" cy="24" rx="14" ry="12"/>
+    <path class="d" d="M10,12 Q16,0 22,12"/>
+    <text class="dt" x="11" y="28">$</text>
+  </g>
+  <g transform="translate(740,260)">
+    <ellipse class="d" cx="14" cy="20" rx="12" ry="10"/>
+    <path class="d" d="M8,10 Q14,0 20,10"/>
+    <text class="dt" x="10" y="24">$</text>
+  </g>
+  <g transform="translate(600,440)">
+    <ellipse class="d" cx="14" cy="20" rx="12" ry="10"/>
+    <path class="d" d="M8,10 Q14,0 20,10"/>
+    <text class="dt" x="10" y="24">$</text>
+  </g>
+
+  <!-- ===== SHIELD / SECURITY ICONS ===== -->
+  <g transform="translate(400,140)">
+    <path class="d" d="M16,2 L28,7 L28,18 Q28,28 16,34 Q4,28 4,18 L4,7 Z"/>
+    <text class="dt" x="12" y="22" style="font-size:8px">W</text>
+  </g>
+  <g transform="translate(620,520)">
+    <path class="d" d="M14,2 L24,6 L24,16 Q24,24 14,30 Q4,24 4,16 L4,6 Z"/>
+    <text class="dt" x="10" y="20" style="font-size:7px">W</text>
+  </g>
+
+  <!-- ===== LOCK ICONS ===== -->
+  <g transform="translate(320,80)">
+    <rect class="d" x="2" y="12" width="18" height="14" rx="2"/>
+    <path class="d" d="M5,12 L5,7 Q5,2 11,2 Q17,2 17,7 L17,12"/>
+    <circle class="d" cx="11" cy="19" r="2"/>
+  </g>
+  <g transform="translate(120,140)">
+    <rect class="d" x="2" y="10" width="16" height="12" rx="2"/>
+    <path class="d" d="M4,10 L4,6 Q4,2 10,2 Q16,2 16,6 L16,10"/>
+  </g>
+  <g transform="translate(700,400)">
+    <rect class="d" x="2" y="10" width="16" height="12" rx="2"/>
+    <path class="d" d="M4,10 L4,6 Q4,2 10,2 Q16,2 16,6 L16,10"/>
+  </g>
+
+  <!-- ===== ARROWS ===== -->
+  <!-- Up arrows -->
+  <g class="d" transform="translate(230,200)">
+    <line x1="8" y1="20" x2="8" y2="0"/>
+    <polyline points="2,8 8,0 14,8"/>
+  </g>
+  <g class="d" transform="translate(560,150)">
+    <line x1="8" y1="20" x2="8" y2="0"/>
+    <polyline points="2,8 8,0 14,8"/>
+  </g>
+  <g class="d" transform="translate(760,50)">
+    <line x1="8" y1="20" x2="8" y2="0"/>
+    <polyline points="2,8 8,0 14,8"/>
+  </g>
+  <g class="d" transform="translate(420,380)">
+    <line x1="8" y1="20" x2="8" y2="0"/>
+    <polyline points="2,8 8,0 14,8"/>
+  </g>
+  <!-- Down arrows -->
+  <g class="d" transform="translate(90,250)">
+    <line x1="8" y1="0" x2="8" y2="20"/>
+    <polyline points="2,12 8,20 14,12"/>
+  </g>
+  <g class="d" transform="translate(680,320)">
+    <line x1="8" y1="0" x2="8" y2="20"/>
+    <polyline points="2,12 8,20 14,12"/>
+  </g>
+  <!-- Right arrow -->
+  <g class="d" transform="translate(170,290)">
+    <line x1="0" y1="8" x2="24" y2="8"/>
+    <polyline points="16,2 24,8 16,14"/>
+  </g>
+  <g class="d" transform="translate(390,260)">
+    <line x1="0" y1="8" x2="24" y2="8"/>
+    <polyline points="16,2 24,8 16,14"/>
+  </g>
+
+  <!-- ===== PLUS/STARS/DOTS ===== -->
+  <!-- Plus signs -->
+  <g class="d" transform="translate(340,24)">
+    <line x1="5" y1="0" x2="5" y2="10"/>
+    <line x1="0" y1="5" x2="10" y2="5"/>
+  </g>
+  <g class="d" transform="translate(600,100)">
+    <line x1="5" y1="0" x2="5" y2="10"/>
+    <line x1="0" y1="5" x2="10" y2="5"/>
+  </g>
+  <g class="d" transform="translate(160,380)">
+    <line x1="5" y1="0" x2="5" y2="10"/>
+    <line x1="0" y1="5" x2="10" y2="5"/>
+  </g>
+  <g class="d" transform="translate(760,220)">
+    <line x1="5" y1="0" x2="5" y2="10"/>
+    <line x1="0" y1="5" x2="10" y2="5"/>
+  </g>
+  <g class="d" transform="translate(490,540)">
+    <line x1="5" y1="0" x2="5" y2="10"/>
+    <line x1="0" y1="5" x2="10" y2="5"/>
+  </g>
+  <!-- 4-pointed stars -->
+  <g class="d" transform="translate(260,60)">
+    <line x1="6" y1="0" x2="6" y2="12"/>
+    <line x1="0" y1="6" x2="12" y2="6"/>
+    <line x1="2" y1="2" x2="10" y2="10"/>
+    <line x1="10" y1="2" x2="2" y2="10"/>
+  </g>
+  <g class="d" transform="translate(430,480)">
+    <line x1="6" y1="0" x2="6" y2="12"/>
+    <line x1="0" y1="6" x2="12" y2="6"/>
+    <line x1="2" y1="2" x2="10" y2="10"/>
+    <line x1="10" y1="2" x2="2" y2="10"/>
+  </g>
+  <!-- Dots scattered -->
+  <circle class="df" cx="450" cy="80" r="2.5"/>
+  <circle class="df" cx="550" cy="260" r="2"/>
+  <circle class="df" cx="240" cy="430" r="2.5"/>
+  <circle class="df" cx="700" cy="170" r="2"/>
+  <circle class="df" cx="380" cy="310" r="2.5"/>
+  <circle class="df" cx="770" cy="480" r="2"/>
+  <circle class="df" cx="100" cy="560" r="2.5"/>
+  <circle class="df" cx="650" cy="50" r="2"/>
+  <circle class="df" cx="30" cy="420" r="2.5"/>
+  <circle class="df" cx="570" cy="380" r="2"/>
+
+  <!-- ===== COIN ===== -->
+  <g transform="translate(368,190)">
+    <circle class="d" cx="16" cy="16" r="16"/>
+    <ellipse class="d" cx="16" cy="10" rx="10" ry="6"/>
+    <line class="d" x1="6" y1="10" x2="6" y2="22"/>
+    <line class="d" x1="26" y1="10" x2="26" y2="22"/>
+    <ellipse class="d" cx="16" cy="22" rx="10" ry="6"/>
+  </g>
+
+  <!-- ===== DOCUMENT / CERTIFICATE ===== -->
+  <g transform="translate(460,110)">
+    <rect class="d" x="0" y="0" width="30" height="36" rx="2"/>
+    <line class="d" x1="5" y1="10" x2="25" y2="10"/>
+    <line class="d" x1="5" y1="16" x2="25" y2="16"/>
+    <line class="d" x1="5" y1="22" x2="18" y2="22"/>
+    <circle class="d" cx="22" cy="28" r="5"/>
+    <line class="d" x1="26" y1="32" x2="30" y2="36"/>
+  </g>
+  <g transform="translate(220,360)">
+    <rect class="d" x="0" y="0" width="26" height="32" rx="2"/>
+    <line class="d" x1="4" y1="9" x2="22" y2="9"/>
+    <line class="d" x1="4" y1="15" x2="22" y2="15"/>
+    <line class="d" x1="4" y1="21" x2="15" y2="21"/>
+  </g>
+
+  <!-- ===== NETWORK / NODE GRAPH ===== -->
+  <g transform="translate(300,220)">
+    <circle class="d" cx="15" cy="5" r="4"/>
+    <circle class="d" cx="4" cy="22" r="4"/>
+    <circle class="d" cx="26" cy="22" r="4"/>
+    <line class="d" x1="13" y1="9" x2="7" y2="18"/>
+    <line class="d" x1="17" y1="9" x2="23" y2="18"/>
+    <line class="d" x1="8" y1="22" x2="22" y2="22"/>
+  </g>
+  <g transform="translate(640,390)">
+    <circle class="d" cx="14" cy="4" r="3"/>
+    <circle class="d" cx="4" cy="20" r="3"/>
+    <circle class="d" cx="24" cy="20" r="3"/>
+    <line class="d" x1="12" y1="7" x2="6" y2="17"/>
+    <line class="d" x1="16" y1="7" x2="22" y2="17"/>
+    <line class="d" x1="7" y1="20" x2="21" y2="20"/>
+  </g>
+
+  <!-- ===== BRAIN (AI) ===== -->
+  <g transform="translate(170,200)">
+    <path class="d" d="M20,4 Q28,2 30,10 Q36,10 36,18 Q36,26 28,28 L12,28 Q4,26 4,18 Q4,10 10,10 Q12,2 20,4 Z"/>
+    <line class="d" x1="20" y1="4" x2="20" y2="28"/>
+    <path class="d" d="M20,12 Q28,14 28,20"/>
+    <path class="d" d="M20,12 Q12,14 12,20"/>
+  </g>
+  <g transform="translate(680,530)">
+    <path class="d" d="M18,4 Q24,2 26,8 Q30,8 30,16 Q30,22 24,24 L12,24 Q6,22 6,16 Q6,8 10,8 Q12,2 18,4 Z"/>
+    <line class="d" x1="18" y1="4" x2="18" y2="24"/>
+  </g>
+
+  <!-- ===== TABLET / PHONE ===== -->
+  <g transform="translate(370,400)">
+    <rect class="d" x="0" y="0" width="30" height="40" rx="3"/>
+    <line class="d" x1="0" y1="34" x2="30" y2="34"/>
+    <circle class="d" cx="15" cy="37" r="2"/>
+    <line class="d" x1="5" y1="10" x2="25" y2="10"/>
+    <line class="d" x1="5" y1="16" x2="20" y2="16"/>
+    <polyline class="d" points="5,24 10,20 16,26 20,22 25,24"/>
+  </g>
+
+  <!-- ===== MEGAPHONE ===== -->
+  <g transform="translate(540,30)">
+    <path class="d" d="M4,8 L4,18 L14,18 L28,26 L28,0 L14,8 Z"/>
+    <ellipse class="d" cx="4" cy="13" rx="3" ry="5"/>
+    <path class="d" d="M8,18 L8,28"/>
+  </g>
+
+  <!-- ===== MAGNIFYING GLASS ===== -->
+  <g transform="translate(780,340)">
+    <circle class="d" cx="12" cy="12" r="10"/>
+    <line class="d" x1="20" y1="20" x2="28" y2="28"/>
+  </g>
+  <g transform="translate(50,60)">
+    <circle class="d" cx="10" cy="10" r="8"/>
+    <line class="d" x1="16" y1="16" x2="22" y2="22"/>
+  </g>
+
+  <!-- ===== CLOUD / DATABASE ===== -->
+  <g transform="translate(440,230)">
+    <path class="d" d="M8,20 Q2,20 2,14 Q2,8 8,8 Q8,2 16,2 Q24,2 24,10 Q30,10 30,16 Q30,22 24,22 L8,22 Z"/>
+    <line class="d" x1="12" y1="22" x2="12" y2="32"/>
+    <line class="d" x1="18" y1="22" x2="18" y2="32"/>
+    <line class="d" x1="9" y1="32" x2="21" y2="32"/>
+  </g>
+
+  <!-- ===== AAPL / TICKER TEXT ===== -->
+  <text class="dt" x="420" y="160" style="font-size:7px;opacity:0.35">AAPL</text>
+  <text class="dt" x="80" y="380" style="font-size:7px;opacity:0.35">AAPL</text>
+  <text class="dt" x="620" y="160" style="font-size:6px;opacity:0.3">REITs</text>
+  <text class="dt" x="340" y="450" style="font-size:6px;opacity:0.3">REITs</text>
+  <text class="dt" x="500" y="420" style="font-size:6px;opacity:0.3">GOLD</text>
+  <text class="dt" x="750" y="300" style="font-size:6px;opacity:0.3">NSDL</text>
+
+  <!-- ===== DIAMOND ===== -->
+  <g transform="translate(240,480)">
+    <polygon class="d" points="14,0 26,12 14,28 2,12"/>
+    <line class="d" x1="2" y1="12" x2="26" y2="12"/>
+    <line class="d" x1="9" y1="0" x2="14" y2="12"/>
+    <line class="d" x1="19" y1="0" x2="14" y2="12"/>
+  </g>
+  <g transform="translate(560,490)">
+    <polygon class="d" points="12,0 22,10 12,24 2,10"/>
+    <line class="d" x1="2" y1="10" x2="22" y2="10"/>
+  </g>
+
+  <!-- ===== PLAY BUTTON (YouTube/media icon) ===== -->
+  <g transform="translate(580,280)">
+    <rect class="d" x="0" y="0" width="28" height="20" rx="4"/>
+    <polygon class="d" points="11,4 11,16 21,10"/>
+  </g>
+
+  <!-- ===== INFO CIRCLE ===== -->
+  <g transform="translate(650,300)">
+    <circle class="d" cx="12" cy="12" r="12"/>
+    <line class="d" x1="12" y1="8" x2="12" y2="18"/>
+    <circle class="d" cx="12" cy="5" r="1.5"/>
+  </g>
+
+  <!-- ===== CHAT BUBBLE ===== -->
+  <g transform="translate(130,310)">
+    <rect class="d" x="0" y="0" width="30" height="22" rx="4"/>
+    <path class="d" d="M8,22 L5,30 L16,22"/>
+    <line class="d" x1="6" y1="8" x2="24" y2="8"/>
+    <line class="d" x1="6" y1="14" x2="20" y2="14"/>
+  </g>
+
+  <!-- ===== LIGHTBULB ===== -->
+  <g transform="translate(720,140)">
+    <path class="d" d="M14,0 Q24,0 24,12 Q24,20 18,22 L18,28 L10,28 L10,22 Q4,20 4,12 Q4,0 14,0 Z"/>
+    <line class="d" x1="10" y1="28" x2="18" y2="28"/>
+    <line class="d" x1="11" y1="31" x2="17" y2="31"/>
+  </g>
+
+  <!-- ===== SMALL SCATTERED FINANCIAL ICONS ===== -->
+  <!-- Equals signs -->
+  <g class="d" transform="translate(300,130)">
+    <line x1="0" y1="3" x2="14" y2="3"/>
+    <line x1="0" y1="8" x2="14" y2="8"/>
+  </g>
+  <g class="d" transform="translate(700,240)">
+    <line x1="0" y1="3" x2="14" y2="3"/>
+    <line x1="0" y1="8" x2="14" y2="8"/>
+  </g>
+  <g class="d" transform="translate(100,500)">
+    <line x1="0" y1="3" x2="14" y2="3"/>
+    <line x1="0" y1="8" x2="14" y2="8"/>
+  </g>
+
+  <!-- Ruler / tick marks -->
+  <g class="d" transform="translate(480,350)">
+    <line x1="0" y1="0" x2="40" y2="0"/>
+    <line x1="0" y1="0" x2="0" y2="6"/>
+    <line x1="10" y1="0" x2="10" y2="4"/>
+    <line x1="20" y1="0" x2="20" y2="6"/>
+    <line x1="30" y1="0" x2="30" y2="4"/>
+    <line x1="40" y1="0" x2="40" y2="6"/>
+  </g>
+
+  <!-- X marks -->
+  <g class="d" transform="translate(620,560)">
+    <line x1="0" y1="0" x2="10" y2="10"/>
+    <line x1="10" y1="0" x2="0" y2="10"/>
+  </g>
+  <g class="d" transform="translate(270,310)">
+    <line x1="0" y1="0" x2="8" y2="8"/>
+    <line x1="8" y1="0" x2="0" y2="8"/>
+  </g>
+
+  <!-- Fingerprint/wave lines (representing scans) -->
+  <g transform="translate(4,550)">
+    <path class="d" d="M0,20 Q10,10 20,20 Q30,30 40,20 Q50,10 60,20"/>
+    <path class="d" d="M0,26 Q10,16 20,26 Q30,36 40,26 Q50,16 60,26"/>
+  </g>
+  <g transform="translate(700,30)">
+    <path class="d" d="M0,16 Q8,8 16,16 Q24,24 32,16 Q40,8 48,16"/>
+    <path class="d" d="M0,22 Q8,14 16,22 Q24,30 32,22 Q40,14 48,22"/>
+  </g>
+
+  <!-- Award medal -->
+  <g transform="translate(770,550)">
+    <circle class="d" cx="14" cy="20" r="12"/>
+    <path class="d" d="M8,8 L8,2 L20,2 L20,8"/>
+    <line class="d" x1="8" y1="8" x2="14" y2="8"/>
+    <line class="d" x1="20" y1="8" x2="14" y2="8"/>
+  </g>
+
+  <!-- Person/investor icon -->
+  <g transform="translate(750,450)">
+    <circle class="d" cx="12" cy="7" r="6"/>
+    <path class="d" d="M2,30 Q2,18 12,18 Q22,18 22,30"/>
+  </g>
+
+  <!-- Small candlestick clusters -->
+  <g transform="translate(360,540)">
+    <line class="d" x1="3" y1="0" x2="3" y2="14"/>
+    <rect class="d" x="1" y="3" width="4" height="8"/>
+    <line class="d" x1="10" y1="2" x2="10" y2="16"/>
+    <rect class="d" x="8" y="5" width="4" height="8"/>
+    <line class="d" x1="17" y1="1" x2="17" y2="13"/>
+    <rect class="d" x="15" y="4" width="4" height="6"/>
+  </g>
+
+  <g transform="translate(680,40)">
+    <line class="d" x1="3" y1="0" x2="3" y2="14"/>
+    <rect class="d" x="1" y="3" width="4" height="7"/>
+    <line class="d" x1="10" y1="1" x2="10" y2="15"/>
+    <rect class="d" x="8" y="4" width="4" height="8"/>
+    <line class="d" x1="17" y1="2" x2="17" y2="12"/>
+    <rect class="d" x="15" y="5" width="4" height="5"/>
+  </g>
+</svg>
