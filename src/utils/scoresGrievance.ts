@@ -5,7 +5,7 @@ export interface ScoresComplaintParams {
   holding?: HoldingItem;
   investorName: string;
   pan?: string;
-  riskCategory?: SebiRiskCategory;
+  riskCategory?: SebiRiskCategory | null;
 }
 
 /**

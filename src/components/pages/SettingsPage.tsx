@@ -406,7 +406,7 @@ export const SettingsPage: React.FC = () => {
                 const riskTokens = getSebiRiskVisualTokens(riskCategory);
                 return (
                   <span className={`px-3 py-1.5 rounded-xl text-xs font-extrabold ${riskTokens.badge}`}>
-                    {riskCategory} (Riskometer {SEBI_RISK_RANKS[riskCategory] || 3}/6)
+                    {riskCategory ? `${riskCategory} (Riskometer ${SEBI_RISK_RANKS[riskCategory] || 3}/6)` : 'Not Assessed'}
                   </span>
                 );
               })()}
@@ -420,7 +420,7 @@ export const SettingsPage: React.FC = () => {
                 className="px-3.5 py-1.5 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center space-x-1.5"
               >
                 <Edit3 className="w-3.5 h-3.5 text-[#C57D25]" />
-                <span>{isEditingRisk ? 'Close Questionnaire' : 'Retake Assessment'}</span>
+                <span>{isEditingRisk ? 'Close Questionnaire' : riskCategory ? 'Retake Assessment' : 'Take Assessment'}</span>
               </button>
             </div>
           </div>
@@ -448,18 +448,22 @@ export const SettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
                 <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">SEBI Risk Band</div>
-                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">{riskCategory}</div>
-                <div className="text-[11px] text-[#6B7280] mt-1">Level {SEBI_RISK_RANKS[riskCategory] || 3} of 6 on standard Riskometer</div>
+                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">{riskCategory || 'Not Assessed'}</div>
+                <div className="text-[11px] text-[#6B7280] mt-1">{riskCategory ? `Level ${SEBI_RISK_RANKS[riskCategory] || 3} of 6 on standard Riskometer` : 'Pending questionnaire completion'}</div>
               </div>
               <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
                 <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Suitability Rule</div>
-                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">Automated Risk Filter</div>
-                <div className="text-[11px] text-[#6B7280] mt-1">Flags holdings with risk rating above {riskCategory}</div>
+                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">{riskCategory ? 'Automated Risk Filter' : 'Default Filter'}</div>
+                <div className="text-[11px] text-[#6B7280] mt-1">{riskCategory ? `Flags holdings with risk rating above ${riskCategory}` : 'Flags high-risk and locked-in mis-selling'}</div>
               </div>
               <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
                 <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Assessment Status</div>
-                <div className="font-extrabold text-[#2BB673] text-sm mt-0.5">Active & Applied</div>
-                <div className="text-[11px] text-[#6B7280] mt-1">Calculated across 5 regulatory parameters</div>
+                <div className={`font-extrabold text-sm mt-0.5 ${riskCategory ? 'text-[#2BB673]' : 'text-[#8B93A7]'}`}>
+                  {riskCategory ? 'Active & Applied' : 'Not Yet Assessed'}
+                </div>
+                <div className="text-[11px] text-[#6B7280] mt-1">
+                  {riskCategory ? 'Calculated across 5 regulatory parameters' : 'Complete 5-question SEBI assessment'}
+                </div>
               </div>
             </div>
           )}

@@ -10,7 +10,7 @@ import { CONCENTRATION_THRESHOLD_PCT } from './healthScore';
 export function evaluateIssueSuitability(
   issue: UpcomingIssue,
   holdings: HoldingItem[],
-  userRiskCategory: SebiRiskCategory,
+  userRiskCategory?: SebiRiskCategory | null,
   simulatedAmount: number = 50000
 ): IpoSuitabilityResult {
   const totalValue = (holdings || []).reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
@@ -50,7 +50,7 @@ export function evaluateIssueSuitability(
     simulatedTotal > 0 ? ((existingSectorValue + simulatedAmount) / simulatedTotal) * 100 : 0;
 
   // 4. Compare SEBI Riskometer ranks
-  const userRiskRank = SEBI_RISK_RANKS[userRiskCategory] || 3;
+  const userRiskRank = userRiskCategory ? (SEBI_RISK_RANKS[userRiskCategory] || 3) : 3;
   const issueRiskRank = SEBI_RISK_RANKS[issue.riskCategory] || 3;
   const riskDelta = issueRiskRank - userRiskRank;
   const riskMatch = riskDelta <= 1;
@@ -86,7 +86,7 @@ export function evaluateIssueSuitability(
       simulatedSectorAllocationPct: Number(simulatedSectorAllocationPct.toFixed(1)),
       simulatedAssetClassAllocationPct: Number(simulatedAssetClassAllocationPct.toFixed(1)),
       riskMatch,
-      userRiskCategory,
+      userRiskCategory: userRiskCategory || null,
       issueRiskCategory: issue.riskCategory,
       causalChain: {
         cause: `You already hold ${existingAssetClassAllocationPct.toFixed(1)}% in REIT/InvIT-linked assets`,
@@ -100,7 +100,7 @@ export function evaluateIssueSuitability(
 
   if (riskDelta >= 2) {
     warnings.push(
-      `Your assessed risk profile is ${userRiskCategory} (Rank ${userRiskRank}/6). This issue is rated ${issue.riskCategory} (Rank ${issueRiskRank}/6).`
+      `Your assessed risk profile is ${userRiskCategory || 'Moderate'} (Rank ${userRiskRank}/6). This issue is rated ${issue.riskCategory} (Rank ${issueRiskRank}/6).`
     );
     warnings.push(
       `High-volatility equity issues can cause substantial short-term drawdowns incompatible with conservative horizons.`
@@ -115,10 +115,10 @@ export function evaluateIssueSuitability(
       simulatedSectorAllocationPct: Number(simulatedSectorAllocationPct.toFixed(1)),
       simulatedAssetClassAllocationPct: Number(simulatedAssetClassAllocationPct.toFixed(1)),
       riskMatch: false,
-      userRiskCategory,
+      userRiskCategory: userRiskCategory || null,
       issueRiskCategory: issue.riskCategory,
       causalChain: {
-        cause: `Assessed risk capacity is ${userRiskCategory} (SEBI Rank ${userRiskRank}/6)`,
+        cause: `Assessed risk capacity is ${userRiskCategory || 'Moderate'} (SEBI Rank ${userRiskRank}/6)`,
         mechanism: `this issue is rated ${issue.riskCategory} (SEBI Rank ${issueRiskRank}/6) with higher drawdowns`,
         impact: `volatility profile exceeds your stated risk tolerance.`,
       },
@@ -137,20 +137,20 @@ export function evaluateIssueSuitability(
     );
   } else {
     diversificationBenefits.push(
-      `Matches your ${userRiskCategory} risk profile and broadens equity/asset diversification.`
+      `Matches your ${userRiskCategory || 'Moderate'} risk profile and broadens equity/asset diversification.`
     );
   }
 
   return {
     verdict: 'suitable',
     headline: 'Suitable Allocation · Aligned with Diversification Goals',
-    description: `Applying for ${issue.name} maintains healthy sector balance and matches your ${userRiskCategory} risk profile.`,
+    description: `Applying for ${issue.name} maintains healthy sector balance and matches your ${userRiskCategory || 'Moderate'} risk profile.`,
     existingSectorAllocationPct: Number(existingSectorAllocationPct.toFixed(1)),
     existingAssetClassAllocationPct: Number(existingAssetClassAllocationPct.toFixed(1)),
     simulatedSectorAllocationPct: Number(simulatedSectorAllocationPct.toFixed(1)),
     simulatedAssetClassAllocationPct: Number(simulatedAssetClassAllocationPct.toFixed(1)),
     riskMatch: true,
-    userRiskCategory,
+    userRiskCategory: userRiskCategory || null,
     issueRiskCategory: issue.riskCategory,
     warnings: [],
     diversificationBenefits,

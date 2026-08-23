@@ -9,7 +9,7 @@ export function normalizeRedFlagStatus(flag?: Partial<RedFlagAlert>): 'active' |
 
 export function deriveRedFlagsFromHoldings(
   holdings: HoldingItem[],
-  userRiskCategory: SebiRiskCategory = 'Moderate',
+  userRiskCategory?: SebiRiskCategory | null,
   monthlyExpensesEstimate?: number | null
 ): RedFlagAlert[] {
   if (!Array.isArray(holdings) || holdings.length === 0) return [];
@@ -18,7 +18,7 @@ export function deriveRedFlagsFromHoldings(
   if (!totalValue) return [];
 
   const flags = new Map<string, RedFlagAlert>();
-  const userRank = SEBI_RISK_RANKS[userRiskCategory] || 3;
+  const userRank = userRiskCategory ? (SEBI_RISK_RANKS[userRiskCategory] || 3) : null;
 
   // ── Liquid Buffer Calculation ──
   const liquidBuffer = holdings
@@ -66,7 +66,7 @@ export function deriveRedFlagsFromHoldings(
       title: 'REIT / InvIT concentration beyond comfort threshold',
       severity,
       category: 'concentration_risk',
-      description: `Combined REIT and InvIT exposure is ${(reitInvitValue / totalValue * 100).toFixed(1)}% of the portfolio, which is above the recommended ceiling for a ${userRiskCategory.toLowerCase()} risk profile.`,
+      description: `Combined REIT and InvIT exposure is ${(reitInvitValue / totalValue * 100).toFixed(1)}% of the portfolio, which is above the recommended ceiling for a ${(userRiskCategory || 'moderate').toLowerCase()} risk profile.`,
       suggestedAction: 'Rebalance a portion of the REIT / InvIT allocation into liquid sovereign debt or diversified equity funds to restore liquidity and reduce rate sensitivity.',
       sebiRuleRef: 'SEBI alternate-asset concentration and suitability guidance',
       status: 'active',
@@ -80,7 +80,7 @@ export function deriveRedFlagsFromHoldings(
     const holdingRank = SEBI_RISK_RANKS[holdingRisk] || 3;
 
     // ── 1. SEBI Product Risk vs Investor Profile Mismatch ──
-    if (holdingRank > userRank) {
+    if (userRank !== null && holdingRank > userRank) {
       const rankDiff = holdingRank - userRank;
       const severity: RedFlagAlert['severity'] = rankDiff >= 2 ? 'high' : 'medium';
       flags.set(`suitability-mismatch-${holding.id}`, {

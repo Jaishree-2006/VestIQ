@@ -181,11 +181,14 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
 
   // ── Metadata extraction ──────────────────────────────────────────────────
   let investorName = 'Investor';
-  // Match "Investor Name  :  PRIYA SHARMA" or "PRIYA SHARMA" in any multi-word context
-  const nameMatch = rawText.match(/Investor\s+Name\s*[:\-]\s*([A-Za-z][A-Za-z\s.]{2,40})/i)
-    || rawText.match(/Name\s*[:\-]\s*([A-Za-z][A-Za-z\s.]{2,30})/i);
+  const nameMatch = rawText.match(/(?:Investor|Client|Holder|First\s+Holder|Account\s+Holder)?\s*Name\s*[:\-]\s*([A-Za-z][A-Za-z\s.']{2,40})/i)
+    || rawText.match(/\bName\s*[:\-]\s*([A-Za-z][A-Za-z\s.']{2,40})/i)
+    || rawText.match(/^([A-Za-z][A-Za-z\s.']{2,30})\s+(?:PAN|Statement|FOLIO)/im);
   if (nameMatch) {
-    investorName = nameMatch[1].trim().replace(/\s+/g, ' ');
+    investorName = (nameMatch[1] || nameMatch[0])
+      .trim()
+      .replace(/\s+(?:PAN|Email|Mobile|Address|Statement|Period|Date|KYC).*/i, '')
+      .replace(/\s+/g, ' ');
   }
 
   let pan = 'ABCDE1234F';
@@ -197,31 +200,24 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
 
   let statementPeriod = '01-Jan-2026 to 30-Jun-2026';
   const periodMatch = rawText.match(/Statement\s+Period\s*[:\-]?\s*([\d]{2}[.\-\/][A-Za-z0-9]{2,3}[.\-\/][\d]{4}\s+to\s+[\d]{2}[.\-\/][A-Za-z0-9]{2,3}[.\-\/][\d]{4})/i)
-    || rawText.match(/([\d]{2}[-\/][A-Za-z]{3}[-\/][\d]{4}\s+to\s+[\d]{2}[-\/][A-Za-z]{3}[-\/][\d]{4})/i);
+    || rawText.match(/([\d]{2}[-\/][A-Za-z]{3}[-\/][\d]{4}\s+to\s+[\d]{2}[-\/][A-Za-z]{3}[-\/][\d]{4})/i)
+    || rawText.match(/Period\s*[:\-]?\s*([A-Za-z0-9\s.\-\/]+to[A-Za-z0-9\s.\-\/]+)/i);
   if (periodMatch) statementPeriod = (periodMatch[1] || periodMatch[0]).trim();
 
-  // ── Detect which known statement this is ──────────────────────────────────
-  // Use very permissive keyword matching since PDF.js may add spaces inside words
+  // ── Detect if this is specifically the built-in Priya Sharma sample statement ──
+  const isExplicitSampleFile =
+    fileName === 'sample_cas.pdf' ||
+    fileName.toLowerCase().includes('sample_cas') ||
+    fileName.toLowerCase().includes('sample');
+
   const t = rawText.toUpperCase().replace(/\s+/g, ' ');
-
-  const hasPriyaSharma  = /PRIYA\s*SHARMA/.test(t);
-  const hasPFC          = /PFC|POWER\s*FINANCE/.test(t);
-  const hasEmbassy      = /EMBASSY|OFFICE\s*PARKS/.test(t);
-  const hasGrid         = /GRID\s*INFRA|GRIDINVIT/.test(t);
-  const hasReliance     = /RELIANCE\s*INDUSTRIES|INE002A01018/.test(t);
-  const hasHDFC         = /HDFC\s*BANK|INE040A01034/.test(t);
-  const hasInfosys      = /INFOSYS|INE009A01021/.test(t);
-  const hasParag        = /PARAG\s*PARIKH|PPFAS|FLEXI\s*CAP/.test(t);
-  const totalPriya      = /18[\s,]*92[\s,]*882/.test(t);
-
-  // Score how strongly this matches the VestIQ sample statement
-  const priyaScore = [hasPriyaSharma, hasPFC, hasEmbassy, hasGrid, hasReliance, hasHDFC, hasInfosys, hasParag, totalPriya]
-    .filter(Boolean).length;
+  const hasPriyaSharma = /PRIYA\s*SHARMA/.test(t);
+  const totalPriya = /18[\s,]*92[\s,]*882/.test(t);
 
   let holdings: HoldingItem[] = [];
   let redFlags: RedFlagAlert[] = [];
 
-  if (priyaScore >= 2) {
+  if (isExplicitSampleFile && hasPriyaSharma && totalPriya) {
     // ── VESTIQ SAMPLE STATEMENT (Priya Sharma) ─────────────────────────────
     investorName = 'Priya Sharma';
     pan = 'ABCDE1234F';
@@ -309,6 +305,12 @@ export function parseCasText(rawText: string, fileName: string): ParsedCasData {
     // ── GENERIC STRUCTURED PDF — parse any CAS using ISIN + table patterns ──
     holdings = parseGenericCas(rawText, fileName);
 
+    if (holdings.length === 0) {
+      throw new CasParsingError(
+        `Unable to extract structured holdings from "${fileName}". Please ensure the PDF is an official NSDL, CDSL, or CAMS/KFintech CAS statement.`
+      );
+    }
+
     // Auto-generate red flags for generic holdings
     holdings.forEach((h, i) => {
       if (h.lockInMonths > 0) {
@@ -380,44 +382,96 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
     if (seenIsins.has(isin)) continue;
     seenIsins.add(isin);
 
-    const start = Math.max(0, m.index - 120);
-    const end = Math.min(flat.length, m.index + 250);
-    const window = flat.substring(start, end);
-
-    // Extract all numbers in window (remove commas first)
-    const nums = (window.match(/[\d,]+\.?\d*/g) || [])
+    // Extract numbers immediately following the ISIN (Units, Price, Total Value)
+    const afterIsin = flat.substring(m.index + isin.length, Math.min(flat.length, m.index + isin.length + 150));
+    const numsAfter = (afterIsin.match(/\b[\d,]+\.?\d*\b/g) || [])
       .map(s => parseFloat(s.replace(/,/g, '')))
       .filter(n => !isNaN(n) && n > 0 && n < 1e10);
 
-    if (nums.length === 0) continue;
+    if (numsAfter.length === 0) continue;
 
-    // Heuristic: currentValue is usually the largest number; qty is smaller
-    const sortedNums = [...nums].sort((a, b) => b - a);
-    const currentValue = sortedNums[0] || 0;
-    const units = sortedNums.find(n => n < currentValue * 0.1 && n >= 1) || 1;
-    const avgPrice = nums.find(n => n > 10 && n < currentValue) || currentValue / (units || 1);
-    const currentPrice = currentValue / (units || 1);
+    // Typically: [Units, Price, Value] or [Value]
+    let currentValue = 0;
+    let units = 1;
+    let currentPrice = 0;
+    let avgPrice = 0;
+
+    if (numsAfter.length >= 3) {
+      // e.g. [100, 3800, 380000] -> Units = 100, Price = 3800, Value = 380000
+      const n1 = numsAfter[0];
+      const n2 = numsAfter[1];
+      const n3 = numsAfter[2];
+
+      if (Math.abs(n1 * n2 - n3) < Math.max(5, n3 * 0.05)) {
+        units = n1;
+        avgPrice = n2;
+        currentPrice = n2;
+        currentValue = n3;
+      } else {
+        currentValue = Math.max(n1, n2, n3);
+        units = Math.min(n1, n2, n3);
+        currentPrice = currentValue / (units || 1);
+        avgPrice = currentPrice;
+      }
+    } else if (numsAfter.length === 2) {
+      const n1 = numsAfter[0];
+      const n2 = numsAfter[1];
+      currentValue = Math.max(n1, n2);
+      units = Math.min(n1, n2);
+      currentPrice = currentValue / (units || 1);
+      avgPrice = currentPrice;
+    } else {
+      currentValue = numsAfter[0];
+      units = 1;
+      currentPrice = currentValue;
+      avgPrice = currentValue;
+    }
+
+    if (currentValue <= 0) continue;
+
+    const textWindow = flat.substring(Math.max(0, m.index - 120), Math.min(flat.length, m.index + 200));
 
     // Category detection
     let category: 'equities' | 'bonds' | 'reits_invits' = 'equities';
-    if (/NCD|BOND|DEBENTURE|NCB|\d\.\d{2}%/i.test(window)) category = 'bonds';
-    if (/REIT|INVIT|EMBASSY|GRID|MINDSPACE|NEXUS/i.test(window)) category = 'reits_invits';
+    if (/NCD|BOND|DEBENTURE|G-?SEC|TREASURY|GOVERNMENT\s*SECURITY|SGB|GS\s*20|\d+\.?\d*%\s*(?:GS|GSEC|NCD)/i.test(textWindow)) category = 'bonds';
+    else if (/REIT|INVIT|EMBASSY|GRID|MINDSPACE|NEXUS|BROOKFIELD|POWERGRID/i.test(textWindow)) category = 'reits_invits';
 
-    // Name: take the chunk before the ISIN, strip numbers, clean up
-    const beforeIsin = flat.substring(start, m.index).trim();
-    const nameCandidates = beforeIsin.split(/\s{2,}/).filter(s => /[A-Za-z]{3,}/.test(s));
-    const rawName = nameCandidates[nameCandidates.length - 1] || '';
-    const name = rawName.replace(/[^A-Za-z0-9 .%&\-]/g, '').trim().substring(0, 45) || `Holding ${isin}`;
+    // Name: take the chunk before the ISIN, clean up
+    const beforeIsin = flat.substring(Math.max(0, m.index - 90), m.index).trim();
+    const rawLines = beforeIsin.split(/[\n\r]|\s{2,}/).map(s => s.trim()).filter(Boolean);
+    const rawCandidate = rawLines[rawLines.length - 1] || beforeIsin;
+    const name = rawCandidate
+      .replace(/^[0-9.\-\s]+/, '')
+      .replace(/[^A-Za-z0-9 .%&'\-]/g, '')
+      .trim()
+      .substring(0, 45) || `Holding ${isin}`;
 
-    // Broker detection
-    let broker = 'Zerodha';
-    if (/ICICI/i.test(window)) broker = 'ICICI Direct';
-    else if (/GROWW/i.test(window)) broker = 'Groww';
-    else if (/RELATIONSHIP\s*MANAGER|RM\s*[-:]/i.test(window)) broker = 'Relationship Manager';
-    else if (/CAMS|KFINTECH/i.test(window)) broker = 'CAMS / KFintech';
-    else if (/NSDL/i.test(window)) broker = 'NSDL Broker';
+    // Broker detection: locate the closest broker/DP section header appearing prior to this holding
+    const preceding = flat.substring(0, m.index);
+    const brokerMatches: { broker: string; index: number }[] = [];
 
-    const lockInMonths = /LOCK|3\s*YEAR|36\s*MONTH/i.test(window) ? 36 : 0;
+    const checkBroker = (bName: string, re: RegExp) => {
+      let match: RegExpExecArray | null;
+      const r = new RegExp(re.source, 'gi');
+      while ((match = r.exec(preceding)) !== null) {
+        brokerMatches.push({ broker: bName, index: match.index });
+      }
+    };
+
+    checkBroker('Groww', /GROWW|NEXTBILLION/);
+    checkBroker('Upstox', /UPSTOX|RKSV/);
+    checkBroker('RBI Retail Direct', /RBI\s*RETAIL\s*DIRECT|RETAIL\s*DIRECT/);
+    checkBroker('Relationship Manager - Axis', /AXIS(?:\s*(?:BANK|DIRECT|MUTUAL|ADVISORY|RM|RELATIONSHIP))?/);
+    checkBroker('Relationship Manager', /RELATIONSHIP\s*MANAGER|RM\s*[-:]/);
+    checkBroker('ICICI Direct', /ICICI\s*DIRECT|ICICI\s*SECURITIES|ICICI/);
+    checkBroker('Zerodha', /ZERODHA/);
+    checkBroker('HDFC Securities', /HDFC\s*SECURITIES/);
+    checkBroker('CAMS / KFintech', /CAMS|KFINTECH/);
+
+    brokerMatches.sort((a, b) => b.index - a.index);
+    const broker = brokerMatches[0]?.broker || 'Depository Participant';
+
+    const lockInMonths = /LOCK|3\s*YEAR|36\s*MONTH/i.test(textWindow) ? 36 : 0;
 
     holdings.push({
       id: `gen-${idCounter++}`,
@@ -425,7 +479,7 @@ function parseGenericCas(rawText: string, fileName: string): HoldingItem[] {
       ticker: isin,
       category,
       broker,
-      depository: /NSDL/i.test(window) ? 'NSDL' : 'CDSL',
+      depository: /NSDL/i.test(textWindow) ? 'NSDL' : 'CDSL',
       units,
       avgPrice,
       currentPrice,

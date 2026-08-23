@@ -133,7 +133,18 @@ export function computeSebiRiskCategory(answers: Partial<RiskProfilerAnswers>): 
  * - Moderate / Moderately High: gold (neutral/info)
  * - High / Very High: red (high risk alert)
  */
-export function getSebiRiskVisualTokens(category: SebiRiskCategory) {
+export function getSebiRiskVisualTokens(category?: SebiRiskCategory | null) {
+  if (!category) {
+    return {
+      bg: 'bg-white',
+      border: 'border-[#EDE9DF]',
+      hoverBorder: 'hover:border-[#C57D25]',
+      text: 'text-[#8B93A7]',
+      badge: 'bg-[#FAF8F5] text-[#8B93A7] border border-[#EDE9DF]',
+      label: 'Not Assessed',
+      accentColor: '#8B93A7',
+    };
+  }
   const rank = SEBI_RISK_RANKS[category] || 3;
   if (rank <= 2) {
     return {

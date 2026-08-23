@@ -532,7 +532,7 @@ export interface IpoSuitabilityResult {
   simulatedSectorAllocationPct: number;
   simulatedAssetClassAllocationPct: number;
   riskMatch: boolean;
-  userRiskCategory: SebiRiskCategory;
+  userRiskCategory: SebiRiskCategory | null;
   issueRiskCategory: SebiRiskCategory;
   causalChain?: IpoSuitabilityCausalChain;
   warnings: string[];

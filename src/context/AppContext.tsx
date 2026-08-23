@@ -116,9 +116,9 @@ interface AppContextType {
   };
 
   // SEBI Risk Profiler
-  riskCategory: SebiRiskCategory;
+  riskCategory: SebiRiskCategory | null;
   riskProfilerAnswers: Partial<RiskProfilerAnswers>;
-  setRiskProfile: (category: SebiRiskCategory, answers?: Partial<RiskProfilerAnswers>) => void;
+  setRiskProfile: (category: SebiRiskCategory | null, answers?: Partial<RiskProfilerAnswers>) => void;
 
   // Emergency Fund Adequacy
   monthlyExpensesEstimate: number | null;
@@ -480,21 +480,22 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     return {};
   });
 
-  const [riskCategory, setRiskCategoryState] = useState<SebiRiskCategory>(() => {
+  const [riskCategory, setRiskCategoryState] = useState<SebiRiskCategory | null>(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('vestiq_user_risk_category');
         if (saved) return saved as SebiRiskCategory;
       } catch (e) { /* ignore */ }
     }
-    return 'Moderate';
+    return null;
   });
 
-  const setRiskProfile = useCallback((category: SebiRiskCategory, answers?: Partial<RiskProfilerAnswers>) => {
+  const setRiskProfile = useCallback((category: SebiRiskCategory | null, answers?: Partial<RiskProfilerAnswers>) => {
     setRiskCategoryState(category);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('vestiq_user_risk_category', category);
+        if (category) localStorage.setItem('vestiq_user_risk_category', category);
+        else localStorage.removeItem('vestiq_user_risk_category');
       } catch (e) { /* ignore */ }
     }
     if (answers) {
@@ -1288,8 +1289,13 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     setRedFlags([]);
     setUploadedCas(null);
     setHealthScoreThresholds(DEFAULT_HEALTH_SCORE_THRESHOLDS);
+    setRiskCategoryState(null);
+    setRiskProfilerAnswersState({});
     if (typeof window !== 'undefined') {
       localStorage.removeItem('vestiq_health_thresholds');
+      localStorage.removeItem('vestiq_user_risk_category');
+      localStorage.removeItem('vestiq_user_risk_answers');
+      localStorage.removeItem('vestiq_monthly_expenses_estimate');
     }
     setHealthScoreEvents([]);
   }, [setHealthScoreThresholds]);

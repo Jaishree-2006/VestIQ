@@ -90,10 +90,10 @@ export const IpoScreenerPage: React.FC = () => {
               Assessed Risk
             </div>
             <div className={`text-xl sm:text-2xl font-extrabold ${riskTokens.text} font-mono-num text-center`}>
-              {riskCategory}
+              {riskCategory || 'Not Assessed'}
             </div>
             <div className="text-[10px] font-bold text-[#8B93A7] mt-0.5">
-              Riskometer: {SEBI_RISK_RANKS[riskCategory] || 3}/6
+              {riskCategory ? `Riskometer: ${SEBI_RISK_RANKS[riskCategory] || 3}/6` : 'Complete in Settings'}
             </div>
           </div>
         </div>

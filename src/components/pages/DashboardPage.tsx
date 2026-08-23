@@ -339,18 +339,15 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Top Right Controls: Language Toggle + SEBI Risk Profile + Health Score */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Quick Language Toggle */}
-            <LanguageToggle />
-
+          {/* Top Right Controls: SEBI Risk Profile + Health Score */}
+          <div className="flex flex-wrap items-stretch gap-3">
             {/* SEBI Risk Profile Badge Card */}
-            {(() => {
+            {riskCategory ? (() => {
               const riskTokens = getSebiRiskVisualTokens(riskCategory);
               return (
                 <div
                   onClick={() => setCurrentPage('settings')}
-                  className={`${riskTokens.bg} border ${riskTokens.border} rounded-2xl p-4 sm:px-6 sm:py-3 flex flex-col items-center justify-center shadow-xs cursor-pointer ${riskTokens.hoverBorder} transition-colors min-w-[140px]`}
+                  className={`${riskTokens.bg} border ${riskTokens.border} rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer ${riskTokens.hoverBorder} transition-colors flex-1 sm:w-44 min-w-[140px]`}
                   title="SEBI Riskometer Profile — Click to edit in Settings"
                 >
                   <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
@@ -364,12 +361,28 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               );
-            })()}
+            })() : (
+              <div
+                onClick={() => setCurrentPage('settings')}
+                className="bg-white border border-dashed border-[#EDE9DF] hover:border-[#C57D25] rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer transition-colors flex-1 sm:w-44 min-w-[140px]"
+                title="SEBI Risk Profile — Click to complete in Settings"
+              >
+                <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
+                  risk profile
+                </div>
+                <div className="text-base sm:text-lg font-extrabold text-[#8B93A7] text-center my-0.5">
+                  Not Assessed
+                </div>
+                <div className="text-[10px] font-bold text-[#C57D25] mt-0.5 flex items-center gap-1 hover:underline">
+                  Complete in Settings &rarr;
+                </div>
+              </div>
+            )}
 
-            {/* Health Score Badge Card top right matching Image 2 */}
+            {/* Health Score Badge Card top right */}
             <div 
               onClick={() => setCurrentPage('red-flags')}
-              className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-4 sm:px-6 sm:py-3 flex flex-col items-center justify-center shadow-xs cursor-pointer hover:border-[#C57D25] transition-colors min-w-[130px]"
+              className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer hover:border-[#C57D25] transition-colors flex-1 sm:w-44 min-w-[140px]"
             >
               <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
                 health score
