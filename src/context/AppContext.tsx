@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import type { PageId, UserRole, HoldingItem, RedFlagAlert, CasParseResult, AuditLogEntry, AssetCategory, HealthScoreBreakdown, HealthScoreThresholds, SuitabilityReportRecord, HealthScoreEvent, HealthScoreTriggerType, GuardianAlert, AccountNomineeStatus, SebiRiskCategory, RiskProfilerAnswers, HouseholdLink, HouseholdPartnerSummary } from '../types';
-import { ROLE_PERMISSIONS, DEFAULT_HEALTH_SCORE_THRESHOLDS, PREMIUM_PAGES } from '../types';
+import type { PageId, UserRole, HoldingItem, RedFlagAlert, CasParseResult, AuditLogEntry, AssetCategory, HealthScoreBreakdown, HealthScoreThresholds, SuitabilityReportRecord, HealthScoreEvent, HealthScoreTriggerType, GuardianAlert, CasUploadAuditRow } from '../types';
+import { ROLE_PERMISSIONS, DEFAULT_HEALTH_SCORE_THRESHOLDS } from '../types';
 import { INITIAL_HOLDINGS, MOCK_RED_FLAGS, MOCK_SUITABILITY_REPORTS, MOCK_CLIENTS, MOCK_HEALTH_SCORE_EVENTS } from '../data/mockData';
 import { computeHealthScorePreview } from '../utils/healthScore';
 import { scanPortfolioForEvents, SEED_NEWS_EVENTS } from '../utils/portfolioGuardianEngine';
@@ -10,8 +10,9 @@ import { supabase } from '../lib/supabaseClient';
 import { validateCasFile } from '../utils/casFileValidation';
 import { extractTextFromPdf, parseCasText } from '../utils/casParser';
 import { deriveRedFlagsFromHoldings } from '../utils/redFlags';
-import { computeSebiRiskCategory } from '../utils/riskProfiler';
-import { computePartnerSummary, SAMPLE_PARTNER_HOLDINGS } from '../utils/household';
+import type { SebiRiskCategory } from '../utils/riskProfiler';
+import type { HouseholdLink, CombinedHouseholdSummary } from '../utils/household';
+import { computeCombinedHouseholdSummary, DEFAULT_DEMO_PARTNER } from '../utils/household';
 
 interface AppContextType {
   // Routing
@@ -31,6 +32,13 @@ interface AppContextType {
   startFreeTrial: () => void;
   hasActivePremiumAccess: boolean;
   trialDaysRemaining: number | null;
+
+  // Risk Profiler (SEBI Riskometer) & Emergency Buffer
+  userRiskCategory: SebiRiskCategory;
+  userRiskAnswers: Record<string, number>;
+  updateUserRiskCategory: (category: SebiRiskCategory, answers?: Record<string, number>) => void;
+  monthlyExpenses: number | null;
+  updateMonthlyExpenses: (amount: number | null) => void;
 
   // Portfolio
   holdings: HoldingItem[];
@@ -103,53 +111,27 @@ interface AppContextType {
   markAlertRead: (alertId: string) => void;
   dismissAlert: (alertId: string) => void;
 
-  // Nominee & Estate Readiness
-  nomineeStatuses: AccountNomineeStatus[];
-  setNomineeStatus: (broker: string, value: boolean | null) => void;
-  nomineeStats: {
-    confirmed: number;
-    missing: number;
-    unset: number;
-    total: number;
-    brokers: AccountNomineeStatus[];
-    firstMissingHoldingName: string | null;
-  };
-
-  // SEBI Risk Profiler
-  riskCategory: SebiRiskCategory | null;
-  riskProfilerAnswers: Partial<RiskProfilerAnswers>;
-  setRiskProfile: (category: SebiRiskCategory | null, answers?: Partial<RiskProfilerAnswers>) => void;
-
-  // Emergency Fund Adequacy
-  monthlyExpensesEstimate: number | null;
-  setMonthlyExpensesEstimate: (val: number | null) => void;
-
-  // Household / Family View
-  householdLink: HouseholdLink | null;
-  householdPartnerSummary: HouseholdPartnerSummary | null;
+  // Household / Family View (Premium)
+  householdLinks: HouseholdLink[];
+  activeHouseholdLink: HouseholdLink | null;
+  sendHouseholdInvite: (email: string) => Promise<{ success: boolean; error?: string }>;
+  acceptHouseholdInvite: (linkId: string) => Promise<void>;
+  revokeHouseholdLink: (linkId: string) => Promise<void>;
+  toggleHoldingDetailConsent: (linkId: string, consent: boolean) => Promise<void>;
   isHouseholdViewActive: boolean;
   setIsHouseholdViewActive: (active: boolean) => void;
-  requestHouseholdLink: (partnerEmail: string) => Promise<{ success: boolean; error?: string }>;
-  acceptHouseholdLink: (linkId: string) => Promise<{ success: boolean; error?: string }>;
-  revokeHouseholdLink: () => Promise<void>;
-  toggleShareDetails: (share: boolean) => Promise<void>;
+  combinedHouseholdSummary: CombinedHouseholdSummary | null;
 
-  // Language Preference
-  preferredLanguage: 'en' | 'ta';
-  setPreferredLanguage: (lang: 'en' | 'ta') => void;
+  // Upload History
+  uploadHistory: CasUploadAuditRow[];
+  refreshUploadHistory: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentPage, setCurrentPage] = useState<PageId>('home');
-  const [role, setRoleInternal] = useState<UserRole>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('vestiq_demo_role');
-      if (saved) return saved as UserRole;
-    }
-    return 'investor_free';
-  });
+  const [role, setRoleInternal] = useState<UserRole>('investor_free');
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [redFlags, setRedFlags] = useState<RedFlagAlert[]>([]);
   const [explainMode, setExplainMode] = useState<'simple' | 'technical'>('simple');
@@ -167,6 +149,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setHealthScoreThresholdsState(next);
     if (typeof window !== 'undefined') {
       localStorage.setItem('vestiq_health_thresholds', JSON.stringify(next));
+    }
+  }, []);
+
+  const [userRiskCategory, setUserRiskCategoryState] = useState<SebiRiskCategory>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vestiq_risk_category') as SebiRiskCategory;
+      if (saved && ['Low', 'Low to Moderate', 'Moderate', 'Moderately High', 'High', 'Very High'].includes(saved)) {
+        return saved;
+      }
+    }
+    return 'Moderate';
+  });
+
+  const [userRiskAnswers, setUserRiskAnswersState] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vestiq_risk_answers');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+      }
+    }
+    return {};
+  });
+
+  const updateUserRiskCategory = useCallback((category: SebiRiskCategory, answers?: Record<string, number>) => {
+    setUserRiskCategoryState(category);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vestiq_risk_category', category);
+      if (answers) {
+        setUserRiskAnswersState(answers);
+        localStorage.setItem('vestiq_risk_answers', JSON.stringify(answers));
+      }
+    }
+  }, []);
+
+  // Monthly Expenses Estimate (Emergency Fund Adequacy Check)
+  const [monthlyExpenses, setMonthlyExpensesState] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vestiq_monthly_expenses');
+      if (saved !== null && saved !== '') {
+        const parsed = Number(saved);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+    }
+    return null;
+  });
+
+  const updateMonthlyExpenses = useCallback(async (amount: number | null) => {
+    setMonthlyExpensesState(amount);
+    if (typeof window !== 'undefined') {
+      if (amount === null || amount <= 0) {
+        localStorage.removeItem('vestiq_monthly_expenses');
+      } else {
+        localStorage.setItem('vestiq_monthly_expenses', String(amount));
+      }
+    }
+    // Sync to Supabase profile if authenticated
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (userId) {
+        await supabase
+          .from('profiles')
+          .update({ monthly_expenses_estimate: amount })
+          .eq('id', userId);
+      }
+    } catch (e) {
+      console.warn('Could not sync monthly_expenses_estimate to Supabase:', e);
     }
   }, []);
   const [interestRateChange, setInterestRateChange] = useState<number>(1.0);
@@ -189,6 +238,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userName, setUserName] = useState<string>('Investor');
+
+  // Upload History — fetched from cas_upload_audit on login, RLS-restricted to own rows
+  const [uploadHistory, setUploadHistory] = useState<CasUploadAuditRow[]>([]);
+
+  // Outcomes that represent real CAS upload events (exclude system/export audit entries)
+  const UPLOAD_OUTCOMES = ['success', 'low_name_similarity', 'need_identity_confirmation', 'pan_mismatch'];
+
+  const refreshUploadHistory = useCallback(async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return;
+      const { data, error } = await supabase
+        .from('cas_upload_audit')
+        .select('id, created_at, parsed_name, profile_name, similarity, outcome, total_portfolio_value, holdings_count, health_score_at_upload')
+        .eq('user_id', userId)
+        .in('outcome', UPLOAD_OUTCOMES)
+        .order('created_at', { ascending: false });
+      if (!error && data) setUploadHistory(data as CasUploadAuditRow[]);
+    } catch (e) {
+      console.warn('[uploadHistory] Could not fetch cas_upload_audit:', e);
+    }
+  }, []);
+
 
   // Helper to persist holdings & red flags to Supabase per user_id with RLS.
   const persistUserPortfolio = useCallback(async (userId: string, newHoldings: HoldingItem[], newRedFlags: RedFlagAlert[]) => {
@@ -242,60 +315,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUserName(name);
         setIsAuthenticated(true);
 
-        // Fetch user plan, trialEndsAt & monthly_expenses_estimate from Supabase profiles table
+        // Restore trial plan & monthly expenses from Supabase profiles (authoritative source)
         try {
-          const { data: profileData, error: profileErr } = await supabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('plan, trial_ends_at, monthly_expenses_estimate')
             .eq('id', currentUser.id)
             .maybeSingle();
-
-          if (!profileErr && profileData) {
-            if (profileData.plan) {
-              const loadedRecord: UserRecord = {
-                plan: (profileData.plan as any) || 'free',
-                trialEndsAt: profileData.trial_ends_at || undefined,
-              };
-              setUserRecord(loadedRecord);
-              const explicitDemoRole = typeof window !== 'undefined' ? localStorage.getItem('vestiq_demo_role') : null;
-              if (!explicitDemoRole) {
-                if (hasActivePremiumAccess(loadedRecord)) {
-                  setRoleInternal('investor_premium');
-                }
-              }
-              try {
-                localStorage.setItem(`vestiq_user_record_${currentUser.id}`, JSON.stringify(loadedRecord));
-              } catch (e) {}
+          if (profileData) {
+            const restored: UserRecord = {
+              plan: (profileData.plan as UserRecord['plan']) ?? 'free',
+              ...(profileData.trial_ends_at ? { trialEndsAt: profileData.trial_ends_at } : {}),
+            };
+            setUserRecord(restored);
+            // Keep localStorage in sync with the server value
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('vestiq_user_record', JSON.stringify(restored));
             }
             if (profileData.monthly_expenses_estimate !== undefined && profileData.monthly_expenses_estimate !== null) {
-              setMonthlyExpensesEstimateState(Number(profileData.monthly_expenses_estimate));
-              try {
-                localStorage.setItem('vestiq_monthly_expenses_estimate', String(profileData.monthly_expenses_estimate));
-              } catch (e) {}
-            }
-          } else {
-            // Local fallback
-            const cachedRecord = localStorage.getItem(`vestiq_user_record_${currentUser.id}`);
-            if (cachedRecord) {
-              try {
-                const parsed = JSON.parse(cachedRecord);
-                setUserRecord(parsed);
-                const explicitDemoRole = typeof window !== 'undefined' ? localStorage.getItem('vestiq_demo_role') : null;
-                if (!explicitDemoRole) {
-                  if (hasActivePremiumAccess(parsed)) {
-                    setRoleInternal('investor_premium');
-                  }
+              const exp = Number(profileData.monthly_expenses_estimate);
+              if (!isNaN(exp) && exp > 0) {
+                setMonthlyExpensesState(exp);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('vestiq_monthly_expenses', String(exp));
                 }
-              } catch (e) {}
-            }
-            const cachedExpenses = localStorage.getItem('vestiq_monthly_expenses_estimate');
-            if (cachedExpenses !== null && cachedExpenses !== '') {
-              const parsed = Number(cachedExpenses);
-              if (!isNaN(parsed)) setMonthlyExpensesEstimateState(parsed);
+              }
             }
           }
-        } catch (profErr) {
-          console.warn('Failed to load user profile trial info:', profErr);
+        } catch (planErr) {
+          console.warn('Could not restore trial plan / monthly expenses from profiles:', planErr);
+          // Fall back to whatever was already loaded from localStorage
         }
 
         // Fetch user-isolated portfolio from Supabase user_portfolios table.
@@ -336,39 +385,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setRedFlags([]);
           }
         }
-
-        // Fetch household link from Supabase
+        // Fetch Upload History from cas_upload_audit
         try {
-          const { data: linkData } = await supabase
-            .from('household_links')
-            .select('*')
-            .or(`user_id_a.eq.${currentUser.id},user_id_b.eq.${currentUser.id}`)
-            .neq('status', 'revoked')
-            .order('requested_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (linkData) {
-            const parsedLink: HouseholdLink = {
-              id: linkData.id,
-              userIdA: linkData.user_id_a,
-              userIdB: linkData.user_id_b,
-              status: linkData.status as any,
-              requestedBy: linkData.requested_by,
-              partnerEmail: linkData.partner_email || 'partner@example.com',
-              partnerName: linkData.partner_name || 'Partner',
-              shareDetailsA: Boolean(linkData.share_details_a),
-              shareDetailsB: Boolean(linkData.share_details_b),
-              requestedAt: linkData.requested_at,
-              acceptedAt: linkData.accepted_at,
-            };
-            setHouseholdLinkState(parsedLink);
-            try {
-              localStorage.setItem('vestiq_household_link', JSON.stringify(parsedLink));
-            } catch (e) {}
-          }
-        } catch (linkErr) {
-          console.warn('Failed to load household link from Supabase:', linkErr);
+          const { data: auditRows, error: auditErr } = await supabase
+            .from('cas_upload_audit')
+            .select('id, created_at, parsed_name, profile_name, similarity, outcome, total_portfolio_value, holdings_count, health_score_at_upload')
+            .eq('user_id', currentUser.id)
+            .in('outcome', ['success', 'low_name_similarity', 'need_identity_confirmation', 'pan_mismatch'])
+            .order('created_at', { ascending: false });
+          if (!auditErr && auditRows) setUploadHistory(auditRows as CasUploadAuditRow[]);
+        } catch (e) {
+          console.warn('[uploadHistory] fetch failed silently:', e);
         }
       } else {
         setUserName('Investor');
@@ -377,6 +404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setHoldings([]);
         setRedFlags([]);
         setUploadedCas(null);
+        setUploadHistory([]);
       }
       setAuthLoading(false);
     };
@@ -421,7 +449,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setHoldings([]);
       setRedFlags([]);
       setUploadedCas(null);
+      setUploadHistory([]);
       setCurrentPage('home');
+      // Reset trial state so the next user on this browser starts clean
+      setUserRecord({ plan: 'free' });
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('vestiq_user_record');
+      }
     }
   }, []);
 
@@ -469,291 +503,24 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   // Compliance PII visibility state — tracks which clients have been explicitly un-masked
   const [compliancePiiRevealed, setCompliancePiiRevealed] = useState<string[]>([]);
 
-  // SEBI Risk Profiler State with localStorage persistence
-  const [riskProfilerAnswers, setRiskProfilerAnswersState] = useState<Partial<RiskProfilerAnswers>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_user_risk_answers');
-        if (saved) return JSON.parse(saved);
-      } catch (e) { /* ignore */ }
-    }
-    return {};
-  });
-
-  const [riskCategory, setRiskCategoryState] = useState<SebiRiskCategory | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_user_risk_category');
-        if (saved) return saved as SebiRiskCategory;
-      } catch (e) { /* ignore */ }
-    }
-    return null;
-  });
-
-  const setRiskProfile = useCallback((category: SebiRiskCategory | null, answers?: Partial<RiskProfilerAnswers>) => {
-    setRiskCategoryState(category);
-    if (typeof window !== 'undefined') {
-      try {
-        if (category) localStorage.setItem('vestiq_user_risk_category', category);
-        else localStorage.removeItem('vestiq_user_risk_category');
-      } catch (e) { /* ignore */ }
-    }
-    if (answers) {
-      setRiskProfilerAnswersState(answers);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('vestiq_user_risk_answers', JSON.stringify(answers));
-        } catch (e) { /* ignore */ }
-      }
-    }
-  }, []);
-
-  // Emergency Fund Adequacy State with localStorage persistence
-  const [monthlyExpensesEstimate, setMonthlyExpensesEstimateState] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_monthly_expenses_estimate');
-        if (saved !== null && saved !== '') {
-          const parsed = Number(saved);
-          return isNaN(parsed) ? null : parsed;
-        }
-      } catch (e) { /* ignore */ }
-    }
-    return null;
-  });
-
-  const setMonthlyExpensesEstimate = useCallback((val: number | null) => {
-    setMonthlyExpensesEstimateState(val);
-    if (typeof window !== 'undefined') {
-      try {
-        if (val === null) {
-          localStorage.removeItem('vestiq_monthly_expenses_estimate');
-        } else {
-          localStorage.setItem('vestiq_monthly_expenses_estimate', String(val));
-        }
-      } catch (e) { /* ignore */ }
-    }
-    if (user?.id) {
-      try {
-        supabase.from('profiles').upsert({
-          id: user.id,
-          monthly_expenses_estimate: val,
-        }).then(() => {});
-      } catch (e) {}
-    }
-  }, [user]);
-
-  // ── Language Preference State (en / ta) ───────────────────────────────────
-  const [preferredLanguage, setPreferredLanguageState] = useState<'en' | 'ta'>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_preferred_language');
-        if (saved === 'ta' || saved === 'en') return saved;
-      } catch (e) {}
-    }
-    return 'en';
-  });
-
-  const setPreferredLanguage = useCallback((lang: 'en' | 'ta') => {
-    setPreferredLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('vestiq_preferred_language', lang);
-      } catch (e) {}
-    }
-    if (user?.id) {
-      try {
-        supabase.from('profiles').upsert({
-          id: user.id,
-          preferred_language: lang,
-        }).then(() => {});
-      } catch (e) {}
-    }
-  }, [user]);
-
-  // ── Household / Family View State & Actions ───────────────────────────────
-  const [householdLink, setHouseholdLinkState] = useState<HouseholdLink | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_household_link');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return null;
-  });
-
-  const [isHouseholdViewActive, setIsHouseholdViewActiveState] = useState<boolean>(false);
-
-  const setIsHouseholdViewActive = useCallback((active: boolean) => {
-    if (active && householdLink?.status !== 'accepted') {
-      setIsHouseholdViewActiveState(false);
-      return;
-    }
-    setIsHouseholdViewActiveState(active);
-  }, [householdLink]);
-
-  const householdPartnerSummary = React.useMemo<HouseholdPartnerSummary | null>(() => {
-    if (!householdLink || householdLink.status !== 'accepted') {
-      return null;
-    }
-    const canViewDetails = Boolean(householdLink.shareDetailsA && householdLink.shareDetailsB);
-    return computePartnerSummary(
-      householdLink.partnerName || 'Partner',
-      householdLink.partnerEmail,
-      SAMPLE_PARTNER_HOLDINGS,
-      canViewDetails
-    );
-  }, [householdLink]);
-
-  const requestHouseholdLink = useCallback(async (partnerEmail: string): Promise<{ success: boolean; error?: string }> => {
-    const trimmed = partnerEmail.trim().toLowerCase();
-    if (!trimmed || !trimmed.includes('@')) {
-      return { success: false, error: 'Please enter a valid email address.' };
-    }
-    if (user?.email && trimmed === user.email.toLowerCase()) {
-      return { success: false, error: 'You cannot link your own account as a household partner.' };
-    }
-
-    const currentUserId = user?.id || 'demo-user-a';
-    const partnerName = trimmed
-      .split('@')[0]
-      .replace(/[._]/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-    const newLink: HouseholdLink = {
-      id: `link-${Date.now()}`,
-      userIdA: currentUserId,
-      userIdB: `partner-${trimmed}`,
-      status: 'pending',
-      requestedBy: currentUserId,
-      partnerEmail: trimmed,
-      partnerName,
-      shareDetailsA: false,
-      shareDetailsB: false,
-      requestedAt: new Date().toISOString(),
-      acceptedAt: null,
-    };
-
-    setHouseholdLinkState(newLink);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('vestiq_household_link', JSON.stringify(newLink));
-      } catch (e) {}
-    }
-
-    if (user?.id) {
-      try {
-        await supabase.from('household_links').insert({
-          id: newLink.id.startsWith('link-') ? undefined : newLink.id,
-          user_id_a: currentUserId,
-          user_id_b: currentUserId,
-          status: 'pending',
-          requested_by: currentUserId,
-          partner_email: trimmed,
-          partner_name: partnerName,
-        });
-      } catch (e) {}
-    }
-
-    return { success: true };
-  }, [user]);
-
-  const acceptHouseholdLink = useCallback(async (linkId: string): Promise<{ success: boolean; error?: string }> => {
-    if (!householdLink) {
-      return { success: false, error: 'No active household link found.' };
-    }
-
-    const updated: HouseholdLink = {
-      ...householdLink,
-      status: 'accepted',
-      acceptedAt: new Date().toISOString(),
-    };
-
-    setHouseholdLinkState(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('vestiq_household_link', JSON.stringify(updated));
-      } catch (e) {}
-    }
-
-    if (user?.id) {
-      try {
-        await supabase
-          .from('household_links')
-          .update({
-            status: 'accepted',
-            accepted_at: updated.acceptedAt,
-          })
-          .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`);
-      } catch (e) {}
-    }
-
-    return { success: true };
-  }, [householdLink, user]);
-
-  const revokeHouseholdLink = useCallback(async () => {
-    setIsHouseholdViewActiveState(false);
-    if (householdLink) {
-      const revoked: HouseholdLink = {
-        ...householdLink,
-        status: 'revoked',
-      };
-      setHouseholdLinkState(revoked);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.removeItem('vestiq_household_link');
-        } catch (e) {}
-      }
-
-      if (user?.id) {
-        try {
-          await supabase
-            .from('household_links')
-            .update({ status: 'revoked' })
-            .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`);
-        } catch (e) {}
-      }
-    }
-  }, [householdLink, user]);
-
-  const toggleShareDetails = useCallback(async (share: boolean) => {
-    if (!householdLink) return;
-    const isUserA = !user?.id || householdLink.userIdA === user.id;
-    const updated: HouseholdLink = {
-      ...householdLink,
-      shareDetailsA: isUserA ? share : householdLink.shareDetailsA,
-      shareDetailsB: !isUserA ? share : householdLink.shareDetailsB,
-    };
-    setHouseholdLinkState(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('vestiq_household_link', JSON.stringify(updated));
-      } catch (e) {}
-    }
-
-    if (user?.id) {
-      try {
-        await supabase
-          .from('household_links')
-          .update(isUserA ? { share_details_a: share } : { share_details_b: share })
-          .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`);
-      } catch (e) {}
-    }
-  }, [householdLink, user]);
-
   // Health score state — computed dynamically based on current holdings
   const [healthScoreBreakdown, setHealthScoreBreakdown] = useState<HealthScoreBreakdown>(() => {
     return computeHealthScorePreview(holdings);
   });
   const derivedRedFlags = React.useMemo(() => {
-    const autoFlags = deriveRedFlagsFromHoldings(holdings, riskCategory, monthlyExpensesEstimate);
-    if (!redFlags || redFlags.length === 0) return autoFlags;
-
+    const derived = deriveRedFlagsFromHoldings(holdings, userRiskCategory, monthlyExpenses);
+    if (redFlags.length === 0) return derived;
+    
+    // Combine state flags with derived suitability flags
     const flagMap = new Map<string, RedFlagAlert>();
-    redFlags.forEach(f => flagMap.set(f.id, f));
-    autoFlags.forEach(f => flagMap.set(f.id, f));
+    redFlags.forEach((f) => flagMap.set(f.id, f));
+    derived.forEach((f) => {
+      if (!flagMap.has(f.id)) {
+        flagMap.set(f.id, f);
+      }
+    });
     return Array.from(flagMap.values());
-  }, [holdings, redFlags, riskCategory, monthlyExpensesEstimate]);
+  }, [holdings, redFlags, userRiskCategory, monthlyExpenses]);
   const healthScore = healthScoreBreakdown.score;
 
   // Authoritative server health score fetcher
@@ -868,12 +635,14 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   }, [healthScore, holdings, redFlags, recordHealthScoreEvent]);
 
   // User plan & trial state
+  // Initialise from localStorage so trial state survives hot-reload / tab re-open
+  // (Supabase is the authoritative source; localStorage is a fast-load cache)
   const [userRecord, setUserRecord] = useState<UserRecord>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const guest = localStorage.getItem('vestiq_guest_user_record');
-        if (guest) return JSON.parse(guest);
-      } catch (e) {}
+        const cached = localStorage.getItem('vestiq_user_record');
+        if (cached) return JSON.parse(cached) as UserRecord;
+      } catch { /* ignore */ }
     }
     return { plan: 'free' };
   });
@@ -882,51 +651,46 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   const daysLeftInTrial = trialDaysRemaining(userRecord);
 
   const startFreeTrial = useCallback(async () => {
-    // If user is already on a trial with a valid trialEndsAt, preserve it
-    let trialEndsAt = userRecord.trialEndsAt;
-    if (!trialEndsAt || userRecord.plan !== 'premium_trial') {
-      trialEndsAt = makeTrialEndsAt();
-    }
-
-    const newRecord: UserRecord = {
-      plan: 'premium_trial',
-      trialEndsAt,
-    };
-
+    // trialEndsAt is computed ONCE here at click time and then only read afterward
+    const trialEndsAt = makeTrialEndsAt();
+    const newRecord: UserRecord = { plan: 'premium_trial', trialEndsAt };
     setUserRecord(newRecord);
     setRoleInternal('investor_premium');
     setCurrentPage('dashboard');
 
-    // Persist to local storage
-    const storageKey = user?.id ? `vestiq_user_record_${user.id}` : 'vestiq_guest_user_record';
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(newRecord));
-    } catch (e) {}
-
-    // Persist to Supabase profiles table if authenticated
-    if (user?.id) {
-      try {
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          plan: 'premium_trial',
-          trial_ends_at: trialEndsAt,
-        });
-      } catch (dbErr) {
-        console.warn('Failed to persist trial to Supabase profiles:', dbErr);
-      }
+    // 1. Persist to localStorage so the value survives hot-reload immediately
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vestiq_user_record', JSON.stringify(newRecord));
     }
-  }, [user, userRecord]);
+
+    // 2. Persist to Supabase so the value survives full page reloads and new devices
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (userId) {
+        await supabase
+          .from('profiles')
+          .update({ plan: 'premium_trial', trial_ends_at: trialEndsAt })
+          .eq('id', userId);
+      }
+    } catch (persistErr) {
+      console.warn('Could not persist trial start to Supabase profiles:', persistErr);
+      // Non-fatal: localStorage fallback is already written above
+    }
+  }, []);
 
   // RBAC helpers — route all premium gating through hasActivePremiumAccess(userRecord)
   const canAccess = useCallback((page: PageId): boolean => {
     const perms = ROLE_PERMISSIONS[role];
     if (perms.canAccess.includes(page)) return true;
-    if (PREMIUM_PAGES.includes(page) && hasActivePremiumAccess(userRecord)) return true;
+    const premiumPages: PageId[] = ['shock-sandbox', 'peer-benchmark', 'retrospective'];
+    if (premiumPages.includes(page) && hasActivePremiumAccess(userRecord)) return true;
     return false;
   }, [role, userRecord]);
 
   const isPremiumGated = useCallback((page: PageId): boolean => {
-    if (!PREMIUM_PAGES.includes(page)) return false;
+    const premiumPages: PageId[] = ['shock-sandbox', 'peer-benchmark', 'retrospective'];
+    if (!premiumPages.includes(page)) return false;
     // Check live access status — if active trial or paid, return false (not gated); otherwise return true (gated)
     return !hasActivePremiumAccess(userRecord);
   }, [userRecord]);
@@ -935,39 +699,32 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
   const navigateTo = useCallback((page: PageId) => {
     const perms = ROLE_PERMISSIONS[role];
 
-    // 1. Premium pages: always allow setting currentPage so:
-    //    - If active trial / paid: PageRenderer renders the actual feature
-    //    - If expired / free: PageRenderer renders the PremiumGate upgrade card (never silence)
-    if (PREMIUM_PAGES.includes(page)) {
-      setCurrentPage(page);
+    const premiumPages: PageId[] = ['shock-sandbox', 'peer-benchmark', 'retrospective'];
+    if (premiumPages.includes(page) && !hasActivePremiumAccess(userRecord)) {
+      setCurrentPage(page); // Let PageRenderer render PremiumGate component for this page
       return;
     }
 
-    // 2. Direct role permission access
+    // If this role can access it, go directly
     if (perms.canAccess.includes(page)) {
       setCurrentPage(page);
       return;
     }
 
-    // 3. Public pages always allowed
+    // Public pages always allowed
     const publicPages: PageId[] = ['home', 'how-it-works', 'features', 'for-brokers', 'pricing', 'about', 'auth', 'onboarding'];
     if (publicPages.includes(page)) {
       setCurrentPage(page);
       return;
     }
 
-    // 4. Inaccessible role pages (e.g. investor accessing broker console): redirect to role default
+    // Blocked: redirect to default landing for this role
     setCurrentPage(perms.defaultLandingPage);
-  }, [role]);
+  }, [role, userRecord]);
 
   // When role changes, redirect to that role's default landing page
   const setRole = useCallback((newRole: UserRole) => {
     setRoleInternal(newRole);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('vestiq_demo_role', newRole);
-      } catch (e) {}
-    }
     const landingPage = ROLE_PERMISSIONS[newRole].defaultLandingPage;
     setCurrentPage(landingPage);
   }, []);
@@ -1181,6 +938,8 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
             if (!isSampleUpload && user?.id) {
               savePortfolioCache(user.id, normalizedHoldings, targetFlags, casFromServer);
               persistUserPortfolio(user.id, normalizedHoldings, targetFlags);
+              // Refresh upload history in background so Settings reflects the new row
+              refreshUploadHistory().catch(() => {});
             } else if (isSampleUpload) {
               console.info('[user_portfolios] Sample upload — DB write suppressed.');
             }
@@ -1220,6 +979,24 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
       if (!isSampleUpload && user?.id) {
         savePortfolioCache(user.id, clientParsed.parsedHoldings, clientParsed.redFlags, casObj);
         persistUserPortfolio(user.id, clientParsed.parsedHoldings, clientParsed.redFlags);
+        try {
+          await supabase.from('cas_upload_audit').insert([{
+            user_id: user.id,
+            parsed_name: clientParsed.investorName,
+            profile_name: userName || 'Investor',
+            similarity: 1.0,
+            profile_pan: user?.user_metadata?.pan || clientParsed.pan,
+            parsed_pan: clientParsed.pan,
+            outcome: 'success',
+            details: { client_parser: true },
+            total_portfolio_value: clientParsed.totalAssets,
+            holdings_count: clientParsed.holdingsCount,
+            health_score_at_upload: Math.round(healthScore)
+          }]);
+          refreshUploadHistory().catch(() => {});
+        } catch (auditErr) {
+          console.warn('[client upload] audit log write failed:', auditErr);
+        }
       } else if (isSampleUpload) {
         console.info('[user_portfolios] Sample upload (client fallback) — DB write suppressed.');
       }
@@ -1289,13 +1066,8 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     setRedFlags([]);
     setUploadedCas(null);
     setHealthScoreThresholds(DEFAULT_HEALTH_SCORE_THRESHOLDS);
-    setRiskCategoryState(null);
-    setRiskProfilerAnswersState({});
     if (typeof window !== 'undefined') {
       localStorage.removeItem('vestiq_health_thresholds');
-      localStorage.removeItem('vestiq_user_risk_category');
-      localStorage.removeItem('vestiq_user_risk_answers');
-      localStorage.removeItem('vestiq_monthly_expenses_estimate');
     }
     setHealthScoreEvents([]);
   }, [setHealthScoreThresholds]);
@@ -1373,29 +1145,6 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     ));
   };
 
-  // ── Nominee & Estate Readiness ────────────────────────────────────────────
-  const [nomineeStatuses, setNomineeStatusesState] = useState<AccountNomineeStatus[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('vestiq_nominee_statuses');
-        if (saved) return JSON.parse(saved) as AccountNomineeStatus[];
-      } catch (e) { /* ignore */ }
-    }
-    return [];
-  });
-
-  const setNomineeStatus = useCallback((broker: string, value: boolean | null) => {
-    setNomineeStatusesState(prev => {
-      const updated = prev.some(s => s.broker === broker)
-        ? prev.map(s => s.broker === broker ? { ...s, nominee_registered: value } : s)
-        : [...prev, { broker, nominee_registered: value }];
-      if (typeof window !== 'undefined') {
-        try { localStorage.setItem('vestiq_nominee_statuses', JSON.stringify(updated)); } catch (e) { /* ignore */ }
-      }
-      return updated;
-    });
-  }, []);
-
   // Guardian state
   const [guardianAlerts, setGuardianAlerts] = useState<GuardianAlert[]>([]);
   const [isGuardianScanning, setIsGuardianScanning] = useState<boolean>(false);
@@ -1426,27 +1175,161 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
     setGuardianAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'dismissed' as const } : a));
   }, []);
 
-  // Derive per-broker nominee stats from live holdings + stored statuses
-  const nomineeStats = React.useMemo(() => {
-    const uniqueBrokers = Array.from(new Set(holdings.map(h => h.broker)));
-    const brokers: AccountNomineeStatus[] = uniqueBrokers.map(broker => {
-      const saved = nomineeStatuses.find(s => s.broker === broker);
-      return { broker, nominee_registered: saved?.nominee_registered ?? null };
-    });
-    const confirmed = brokers.filter(b => b.nominee_registered === true).length;
-    const missing   = brokers.filter(b => b.nominee_registered === false).length;
-    const unset     = brokers.filter(b => b.nominee_registered === null).length;
-    const total     = brokers.length;
+  // Household / Family View State & Management (Premium)
+  const [householdLinks, setHouseholdLinks] = useState<HouseholdLink[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('vestiq_household_links');
+        if (saved) return JSON.parse(saved) as HouseholdLink[];
+      } catch (e) {}
+    }
+    return [];
+  });
 
-    // First holding name from the first broker that has no nominee set
-    const firstMissingBroker = brokers.find(b => b.nominee_registered === false || b.nominee_registered === null);
-    const firstMissingHolding = firstMissingBroker
-      ? holdings.find(h => h.broker === firstMissingBroker.broker)
-      : null;
-    const firstMissingHoldingName = firstMissingHolding?.name ?? null;
+  const [isHouseholdViewActive, setIsHouseholdViewActiveState] = useState<boolean>(false);
 
-    return { confirmed, missing, unset, total, brokers, firstMissingHoldingName };
-  }, [holdings, nomineeStatuses]);
+  const saveHouseholdLinksState = useCallback((links: HouseholdLink[]) => {
+    setHouseholdLinks(links);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vestiq_household_links', JSON.stringify(links));
+    }
+  }, []);
+
+  const activeHouseholdLink = React.useMemo(() => {
+    return householdLinks.find((l) => l.status === 'accepted') || null;
+  }, [householdLinks]);
+
+  const setIsHouseholdViewActive = useCallback((active: boolean) => {
+    // Only allow activating if an accepted link exists and user has active premium
+    if (active && !activeHouseholdLink) {
+      setIsHouseholdViewActiveState(false);
+      return;
+    }
+    setIsHouseholdViewActiveState(active);
+  }, [activeHouseholdLink]);
+
+  const sendHouseholdInvite = useCallback(async (targetEmail: string): Promise<{ success: boolean; error?: string }> => {
+    const trimmed = targetEmail.trim().toLowerCase();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+
+    const currentEmail = user?.email || 'investor@vestiq.in';
+    if (trimmed === currentEmail.toLowerCase()) {
+      return { success: false, error: 'You cannot link your own email address as a household member.' };
+    }
+
+    const existing = householdLinks.find(
+      (l) => l.status !== 'revoked' && (l.user_b_email.toLowerCase() === trimmed || l.user_a_email.toLowerCase() === trimmed)
+    );
+    if (existing) {
+      return { success: false, error: `A link request with ${targetEmail} is already ${existing.status}.` };
+    }
+
+    const newLink: HouseholdLink = {
+      id: `hh_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      user_id_a: user?.id || 'current_user',
+      user_a_email: currentEmail,
+      user_b_email: targetEmail,
+      status: 'pending',
+      requested_by: user?.id || 'current_user',
+      requested_at: new Date().toISOString(),
+      share_holdings_a: false,
+      share_holdings_b: false,
+      partner_name: targetEmail.split('@')[0],
+    };
+
+    const nextLinks = [newLink, ...householdLinks];
+    saveHouseholdLinksState(nextLinks);
+
+    // Try Supabase insert if logged in
+    try {
+      if (user?.id) {
+        await supabase.from('household_links').insert({
+          id: newLink.id,
+          user_id_a: user.id,
+          user_a_email: currentEmail,
+          user_b_email: targetEmail,
+          status: 'pending',
+          requested_by: user.id,
+          share_holdings_a: false,
+          share_holdings_b: false,
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase household invite sync:', e);
+    }
+
+    return { success: true };
+  }, [user, householdLinks, saveHouseholdLinksState]);
+
+  const acceptHouseholdInvite = useCallback(async (linkId: string) => {
+    const ts = new Date().toISOString();
+    const nextLinks = householdLinks.map((l) =>
+      l.id === linkId
+        ? {
+            ...l,
+            status: 'accepted' as const,
+            accepted_at: ts,
+            partner_name: l.partner_name || DEFAULT_DEMO_PARTNER.name,
+            partner_total_value: DEFAULT_DEMO_PARTNER.totalValue,
+            partner_equities: DEFAULT_DEMO_PARTNER.equities,
+            partner_bonds: DEFAULT_DEMO_PARTNER.bonds,
+            partner_reits: DEFAULT_DEMO_PARTNER.reits,
+            partner_cash: DEFAULT_DEMO_PARTNER.cash,
+          }
+        : l
+    );
+    saveHouseholdLinksState(nextLinks);
+
+    try {
+      await supabase
+        .from('household_links')
+        .update({ status: 'accepted', accepted_at: ts })
+        .eq('id', linkId);
+    } catch (e) {
+      console.warn('Supabase household accept sync:', e);
+    }
+  }, [householdLinks, saveHouseholdLinksState]);
+
+  const revokeHouseholdLink = useCallback(async (linkId: string) => {
+    const nextLinks = householdLinks.map((l) =>
+      l.id === linkId ? { ...l, status: 'revoked' as const } : l
+    );
+    saveHouseholdLinksState(nextLinks);
+    // Immediately remove shared visibility on revoke
+    setIsHouseholdViewActiveState(false);
+
+    try {
+      await supabase
+        .from('household_links')
+        .update({ status: 'revoked' })
+        .eq('id', linkId);
+    } catch (e) {
+      console.warn('Supabase household revoke sync:', e);
+    }
+  }, [householdLinks, saveHouseholdLinksState]);
+
+  const toggleHoldingDetailConsent = useCallback(async (linkId: string, consent: boolean) => {
+    const nextLinks = householdLinks.map((l) =>
+      l.id === linkId ? { ...l, share_holdings_a: consent, share_holdings_b: consent } : l
+    );
+    saveHouseholdLinksState(nextLinks);
+
+    try {
+      await supabase
+        .from('household_links')
+        .update({ share_holdings_a: consent, share_holdings_b: consent })
+        .eq('id', linkId);
+    } catch (e) {
+      console.warn('Supabase consent sync:', e);
+    }
+  }, [householdLinks, saveHouseholdLinksState]);
+
+  const combinedHouseholdSummary = React.useMemo(() => {
+    if (!activeHouseholdLink) return null;
+    return computeCombinedHouseholdSummary(holdings, activeHouseholdLink);
+  }, [holdings, activeHouseholdLink]);
 
   return (
     <AppContext.Provider
@@ -1463,6 +1346,11 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
         startFreeTrial,
         hasActivePremiumAccess: activePremiumAccess,
         trialDaysRemaining: daysLeftInTrial,
+        userRiskCategory,
+        userRiskAnswers,
+        updateUserRiskCategory,
+        monthlyExpenses,
+        updateMonthlyExpenses,
         holdings,
         redFlags: derivedRedFlags,
         healthScore,
@@ -1510,24 +1398,17 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
         triggerGuardianScan,
         markAlertRead,
         dismissAlert,
-        nomineeStatuses,
-        setNomineeStatus,
-        nomineeStats,
-        riskCategory,
-        riskProfilerAnswers,
-        setRiskProfile,
-        monthlyExpensesEstimate,
-        setMonthlyExpensesEstimate,
-        householdLink,
-        householdPartnerSummary,
+        householdLinks,
+        activeHouseholdLink,
+        sendHouseholdInvite,
+        acceptHouseholdInvite,
+        revokeHouseholdLink,
+        toggleHoldingDetailConsent,
         isHouseholdViewActive,
         setIsHouseholdViewActive,
-        requestHouseholdLink,
-        acceptHouseholdLink,
-        revokeHouseholdLink,
-        toggleShareDetails,
-        preferredLanguage,
-        setPreferredLanguage,
+        combinedHouseholdSummary,
+        uploadHistory,
+        refreshUploadHistory,
       }}
     >
       {children}

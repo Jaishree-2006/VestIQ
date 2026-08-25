@@ -55,6 +55,7 @@ export const AppSidebar: React.FC = () => {
     { id: 'explainability', label: 'Explainability', icon: <Lightbulb className="w-4 h-4" /> },
     { id: 'red-flags', label: 'Red Flags', icon: <AlertTriangle className="w-4 h-4" />, badge: activeRedFlagCount, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'shock-sandbox', label: 'Shock Sandbox', icon: <Sliders className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
+    { id: 'ipo-screener', label: 'IPO / NFO Screener', icon: <Sparkles className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'peer-benchmark', label: 'Peer Benchmark', icon: <Users className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'retrospective', label: 'Retrospective', icon: <History className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'ipo-screener', label: 'IPO / NFO Screener', icon: <Sparkles className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },

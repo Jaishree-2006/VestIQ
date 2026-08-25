@@ -1,5 +1,5 @@
-import type { HoldingItem, RedFlagAlert, SebiRiskCategory } from '../types';
-import { SEBI_RISK_RANKS } from './riskProfiler';
+import type { HoldingItem, RedFlagAlert } from '../types';
+import { SEBI_RISK_RANKS, HOLDING_RISK_RANKS, type SebiRiskCategory } from './riskProfiler';
 
 export function normalizeRedFlagStatus(flag?: Partial<RedFlagAlert>): 'active' | 'resolved' | 'acknowledged' {
   const status = flag?.status;
@@ -7,10 +7,26 @@ export function normalizeRedFlagStatus(flag?: Partial<RedFlagAlert>): 'active' |
   return 'active';
 }
 
+export function calculateLiquidBuffer(holdings: HoldingItem[]): number {
+  if (!Array.isArray(holdings)) return 0;
+  return holdings
+    .filter((h) => {
+      if (h.category === 'cash') return true;
+      const isLiquidNaming = /liquid|overnight|money market|savings|treasury bill|t-bill|cash/i.test(h.name) ||
+        /liquid|overnight|cash/i.test(h.ticker);
+      // Mutual funds / bonds with short-duration/liquid naming and 0 lock-in
+      if ((h.category === 'equities' || h.category === 'bonds') && (!h.lockInMonths || h.lockInMonths === 0) && isLiquidNaming) {
+        return true;
+      }
+      return false;
+    })
+    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
+}
+
 export function deriveRedFlagsFromHoldings(
   holdings: HoldingItem[],
-  userRiskCategory?: SebiRiskCategory | null,
-  monthlyExpensesEstimate?: number | null
+  userRiskCategory: SebiRiskCategory = 'Moderate',
+  monthlyExpenses?: number | null
 ): RedFlagAlert[] {
   if (!Array.isArray(holdings) || holdings.length === 0) return [];
 
@@ -18,36 +34,27 @@ export function deriveRedFlagsFromHoldings(
   if (!totalValue) return [];
 
   const flags = new Map<string, RedFlagAlert>();
-  const userRank = userRiskCategory ? (SEBI_RISK_RANKS[userRiskCategory] || 3) : null;
 
-  // ── Liquid Buffer Calculation ──
-  const liquidBuffer = holdings
-    .filter(
-      (h) =>
-        h.category === 'cash' ||
-        /liquid|overnight|money market|savings|treasury/i.test(h.name) ||
-        /liquid|cash/i.test(h.ticker)
-    )
-    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
+  // Emergency Fund Adequacy Check (only if monthlyExpenses is provided and > 0)
+  if (typeof monthlyExpenses === 'number' && monthlyExpenses > 0) {
+    const liquidBuffer = calculateLiquidBuffer(holdings);
+    const targetBuffer = 3 * monthlyExpenses;
+    if (liquidBuffer < targetBuffer) {
+      const monthsCovered = (liquidBuffer / monthlyExpenses).toFixed(1);
+      const illiquidHolding = holdings.find((h) => h.lockInMonths && h.lockInMonths > 0) ||
+        holdings.find((h) => h.category === 'reits_invits' || /REIT|InvIT/i.test(h.name));
+      const illiquidRef = illiquidHolding ? ` like your ${illiquidHolding.name}` : '';
 
-  // ── Emergency Fund Adequacy Check (< 3x Monthly Living Expenses) ──
-  if (monthlyExpensesEstimate !== null && monthlyExpensesEstimate !== undefined && monthlyExpensesEstimate > 0) {
-    const monthsCovered = liquidBuffer / monthlyExpensesEstimate;
-    if (monthsCovered < 3.0) {
-      const illiquidHoldings = holdings.filter(h => Number(h.lockInMonths) >= 12 || /InvIT|REIT/i.test(h.name));
-      const illiquidExample = illiquidHoldings[0]?.name || 'Grid InvIT';
-      const severity: RedFlagAlert['severity'] = monthsCovered < 1.5 ? 'high' : 'medium';
-
-      flags.set('emergency-fund-inadequacy', {
-        id: 'auto-emergency-fund-inadequacy',
+      flags.set('emergency-fund-adequacy', {
+        id: 'auto-emergency-fund-adequacy',
         holdingId: 'portfolio',
-        holdingName: 'Emergency Liquid Buffer',
-        title: 'Thin Liquid Buffer Ahead of Illiquid Allocations',
-        severity,
+        holdingName: 'Emergency Fund & Liquid Buffer',
+        title: 'Liquid buffer below 3-month emergency threshold',
+        severity: Number(monthsCovered) < 1.0 ? 'high' : 'medium',
         category: 'liquidity_mismatch',
-        description: `Your liquid buffer covers ~${monthsCovered.toFixed(1)} months of expenses (below the 3-month safety threshold). Consider this before committing further funds to illiquid instruments like your ${illiquidExample}.`,
-        suggestedAction: `Maintain at least 3–6 months of living expenses (₹${(monthlyExpensesEstimate * 3).toLocaleString('en-IN')}–₹${(monthlyExpensesEstimate * 6).toLocaleString('en-IN')}) in liquid debt funds or high-yield savings before allocating capital to locked-in assets.`,
-        sebiRuleRef: 'SEBI Investor Education & Protection Guidelines on Emergency Buffer & Liquidity Adequacy',
+        description: `Your liquid buffer covers ~${monthsCovered} months of expenses (₹${Math.round(liquidBuffer).toLocaleString('en-IN')}) against your estimated monthly expense of ₹${Math.round(monthlyExpenses).toLocaleString('en-IN')}, which is below the 3-month safety threshold. Consider this before committing further funds to illiquid instruments${illiquidRef}.`,
+        suggestedAction: 'Establish an emergency buffer covering at least 3 to 6 months of mandatory living expenses in high-liquidity instruments (e.g. liquid mutual funds or sweep-in deposits) before committing additional capital to lock-in products.',
+        sebiRuleRef: 'SEBI emergency liquidity buffer and financial suitability guidance',
         status: 'active',
       });
     }
@@ -66,40 +73,19 @@ export function deriveRedFlagsFromHoldings(
       title: 'REIT / InvIT concentration beyond comfort threshold',
       severity,
       category: 'concentration_risk',
-      description: `Combined REIT and InvIT exposure is ${(reitInvitValue / totalValue * 100).toFixed(1)}% of the portfolio, which is above the recommended ceiling for a ${(userRiskCategory || 'moderate').toLowerCase()} risk profile.`,
+      description: `Combined REIT and InvIT exposure is ${(reitInvitValue / totalValue * 100).toFixed(1)}% of the portfolio, which is above the recommended ceiling for a ${userRiskCategory.toLowerCase()} risk profile.`,
       suggestedAction: 'Rebalance a portion of the REIT / InvIT allocation into liquid sovereign debt or diversified equity funds to restore liquidity and reduce rate sensitivity.',
       sebiRuleRef: 'SEBI alternate-asset concentration and suitability guidance',
       status: 'active',
     });
   }
 
+  const userRank = SEBI_RISK_RANKS[userRiskCategory] || 3;
+
   holdings.forEach((holding) => {
     const holdingWeight = ((Number(holding.currentValue) || 0) / totalValue) * 100;
     const lockInMonths = Number(holding.lockInMonths) || 0;
-    const holdingRisk = (holding.riskCategory || 'Moderate') as SebiRiskCategory;
-    const holdingRank = SEBI_RISK_RANKS[holdingRisk] || 3;
 
-    // ── 1. SEBI Product Risk vs Investor Profile Mismatch ──
-    if (userRank !== null && holdingRank > userRank) {
-      const rankDiff = holdingRank - userRank;
-      const severity: RedFlagAlert['severity'] = rankDiff >= 2 ? 'high' : 'medium';
-      flags.set(`suitability-mismatch-${holding.id}`, {
-        id: `auto-suitability-${holding.id}`,
-        holdingId: holding.id,
-        holdingName: holding.name,
-        title: `Suitability risk mismatch on ${holding.name}`,
-        severity,
-        category: 'suitability',
-        description: `Your assessed SEBI risk profile is ${userRiskCategory}, but ${holding.name} is categorized ${holdingRisk} on the SEBI Riskometer — holding this higher-volatility instrument creates an investor suitability mismatch.`,
-        suggestedAction: `Review whether this asset fits your overall financial goals, or consider reallocating to lower-risk instruments matching your ${userRiskCategory} profile (e.g., sovereign debt or balanced hybrid funds).`,
-        sebiRuleRef: 'SEBI Master Circular on Product Suitability & Riskometer Alignment',
-        status: 'active',
-        broker_reg_number: holding.broker_reg_number,
-        rm_name: holding.rm_name,
-      });
-    }
-
-    // ── 2. Single Asset Concentration Risk ──
     if (holdingWeight > 25) {
       flags.set(`concentration-${holding.id}`, {
         id: `auto-concentration-${holding.id}`,
@@ -112,12 +98,9 @@ export function deriveRedFlagsFromHoldings(
         suggestedAction: 'Reduce exposure in this holding and diversify into lower-correlation assets that better match the stated investment horizon.',
         sebiRuleRef: 'SEBI concentration and suitability guidance',
         status: 'active',
-        broker_reg_number: holding.broker_reg_number,
-        rm_name: holding.rm_name,
       });
     }
 
-    // ── 3. Horizon Lock-in vs Liquidity Mismatch ──
     if (lockInMonths >= 24 && holdingWeight >= 10) {
       flags.set(`liquidity-${holding.id}`, {
         id: `auto-liquidity-${holding.id}`,
@@ -130,11 +113,31 @@ export function deriveRedFlagsFromHoldings(
         suggestedAction: 'Confirm the intended liquidity window and consider reallocating a portion of this capital into liquid debt or cash equivalents.',
         sebiRuleRef: 'SEBI product suitability and investor horizon guidance',
         status: 'active',
-        broker_reg_number: holding.broker_reg_number,
-        rm_name: holding.rm_name || (holding.id === 'h2' ? 'Amit Verma (Relationship Manager)' : undefined),
+      });
+    }
+
+    // Product Risk Level Mismatch Check against User Risk Category
+    const rawHoldingRisk = holding.riskCategory || 'Moderate';
+    const holdingRank = HOLDING_RISK_RANKS[rawHoldingRisk] || (holding.category === 'reits_invits' ? 5 : 3);
+
+    if (holdingRank > userRank) {
+      const rankGap = holdingRank - userRank;
+      const severity: RedFlagAlert['severity'] = rankGap >= 2 ? 'high' : 'medium';
+      flags.set(`suitability-risk-${holding.id}`, {
+        id: `auto-suitability-risk-${holding.id}`,
+        holdingId: holding.id,
+        holdingName: holding.name,
+        title: `Risk profile mismatch on ${holding.name}`,
+        severity,
+        category: 'suitability',
+        description: `Your risk profile is ${userRiskCategory}, but this instrument is categorized ${rawHoldingRisk} — here's why that's a mismatch: your profiled risk tolerance cannot absorb the price volatility and loss potential associated with ${rawHoldingRisk.toLowerCase()}-risk assets like ${holding.name}.`,
+        suggestedAction: `Review whether this high-risk instrument aligns with your ${userRiskCategory.toLowerCase()} risk profile, and consider reallocating into lower-volatility capital preservation options.`,
+        sebiRuleRef: 'SEBI Riskometer alignment and product suitability guidance',
+        status: 'active',
       });
     }
   });
 
   return Array.from(flags.values());
 }
+

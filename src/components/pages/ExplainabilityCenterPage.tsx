@@ -12,12 +12,10 @@ import {
   ShieldAlert, 
   CheckCircle2 
 } from 'lucide-react';
-import { GlossaryTerm } from '../ui/GlossaryTerm';
-import { LanguageToggle } from '../ui/LanguageToggle';
-import { translateExplanation, getLanguageFontClass } from '../../utils/translations';
+import { GlossaryTerm } from '../common/GlossaryTerm';
 
 export const ExplainabilityCenterPage: React.FC = () => {
-  const { holdings, explainMode, setExplainMode, role, preferredLanguage } = useApp();
+  const { holdings, explainMode, setExplainMode, role } = useApp();
   const [selectedHoldingId, setSelectedHoldingId] = useState<string>('h1');
 
   const selectedHolding = holdings.find(h => h.id === selectedHoldingId) || holdings[0];
@@ -41,40 +39,35 @@ export const ExplainabilityCenterPage: React.FC = () => {
               Explainability Center
             </h1>
             <p className="text-sm text-[#6B7280] mt-1">
-              Every portfolio score, yield metric, and risk tag translated into a plain-English causal chain.
+              Every portfolio score, yield metric, and risk tag translated into a plain-English <GlossaryTerm term="Causal Chain">causal chain</GlossaryTerm>.
             </p>
           </div>
 
-          {/* Controls: Language Toggle & Mode Toggle */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <LanguageToggle />
+          {/* Mode Toggle: "Explain like I'm new" vs "Technical basis" */}
+          <div className="bg-[#F6F4ED] p-1 rounded-xl border border-[#EDE9DF] flex items-center shrink-0">
+            <button
+              onClick={() => setExplainMode('simple')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                explainMode === 'simple'
+                  ? 'bg-white text-[#C57D25] shadow-xs'
+                  : 'text-[#6B7280] hover:text-[#14213D]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#C57D25]" />
+              <span>Explain like I'm new</span>
+            </button>
 
-            {/* Mode Toggle: "Explain like I'm new" vs "Technical basis" */}
-            <div className="bg-[#F6F4ED] p-1 rounded-xl border border-[#EDE9DF] flex items-center shrink-0">
-              <button
-                onClick={() => setExplainMode('simple')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                  explainMode === 'simple'
-                    ? 'bg-white text-[#C57D25] shadow-xs'
-                    : 'text-[#6B7280] hover:text-[#14213D]'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#C57D25]" />
-                <span>Explain like I'm new</span>
-              </button>
-
-              <button
-                onClick={() => setExplainMode('technical')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                  explainMode === 'technical'
-                    ? 'bg-white text-[#14213D] shadow-xs'
-                    : 'text-[#6B7280] hover:text-[#14213D]'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Show technical basis</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setExplainMode('technical')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                explainMode === 'technical'
+                  ? 'bg-white text-[#14213D] shadow-xs'
+                  : 'text-[#6B7280] hover:text-[#14213D]'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Show technical basis</span>
+            </button>
           </div>
         </div>
 
@@ -105,7 +98,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
           
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#F1EFE9]">
             <div>
-              <div className="text-xs text-[#8B93A7] font-semibold uppercase tracking-wider"><GlossaryTerm term="causal chain">Causal Analysis</GlossaryTerm> for</div>
+              <div className="text-xs text-[#8B93A7] font-semibold uppercase tracking-wider">Causal Analysis for</div>
               <h2 className="text-xl font-extrabold text-[#14213D] mt-0.5">{selectedHolding.name}</h2>
             </div>
             <div className="text-right">
@@ -125,8 +118,8 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-1">
                 Root Cause
               </div>
-              <h3 className={`font-bold text-base text-[#14213D] mb-2 ${getLanguageFontClass(preferredLanguage)}`}>
-                {translateExplanation(selectedHolding.causalChain.cause, preferredLanguage)}
+              <h3 className="font-bold text-base text-[#14213D] mb-2">
+                {selectedHolding.causalChain.cause}
               </h3>
               <p className="text-sm text-[#63451B] leading-relaxed">
                 {explainMode === 'simple'
@@ -144,8 +137,8 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-1">
                 Transmission Mechanism
               </div>
-              <h3 className={`font-bold text-base text-[#14213D] mb-2 ${getLanguageFontClass(preferredLanguage)}`}>
-                {translateExplanation(selectedHolding.causalChain.mechanism, preferredLanguage)}
+              <h3 className="font-bold text-base text-[#14213D] mb-2">
+                {selectedHolding.causalChain.mechanism}
               </h3>
               <p className="text-sm text-[#63451B] leading-relaxed">
                 {explainMode === 'simple'
@@ -163,8 +156,8 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <div className="text-xs font-bold uppercase tracking-wider text-[#EF4444] mb-1">
                 Projected Impact
               </div>
-              <h3 className={`font-bold text-base text-[#991B1B] mb-2 ${getLanguageFontClass(preferredLanguage)}`}>
-                {translateExplanation(selectedHolding.causalChain.impact, preferredLanguage)}
+              <h3 className="font-bold text-base text-[#991B1B] mb-2">
+                {selectedHolding.causalChain.impact}
               </h3>
               <p className="text-sm text-[#7F1D1D] leading-relaxed">
                 {explainMode === 'simple'
@@ -183,7 +176,7 @@ export const ExplainabilityCenterPage: React.FC = () => {
               <span>Current mode: <strong className="text-[#14213D]">{explainMode === 'simple' ? 'Plain-English Retail Narrative' : 'SEBI Institutional Risk Metric'}</strong></span>
             </div>
             <div className="font-semibold text-[#C57D25]">
-              <GlossaryTerm term="suitability score">Suitability Score</GlossaryTerm>: {selectedHolding.suitabilityScore}/100
+              <GlossaryTerm term="Suitability Score" showIcon>Suitability Score</GlossaryTerm>: {selectedHolding.suitabilityScore}/100
             </div>
           </div>
 

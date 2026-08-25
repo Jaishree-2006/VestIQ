@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AppSidebar } from '../layout/AppSidebar';
 import { PortfolioStoryTimeline } from '../portfolio/PortfolioStoryTimeline';
@@ -16,15 +16,13 @@ import {
   ExternalLink,
   ChevronDown,
   X,
-  UserCheck,
-  UserX,
   Users,
+  ShieldCheck,
+  Sparkles,
   Calendar,
+  Wallet,
 } from 'lucide-react';
-import { getSebiRiskVisualTokens, SEBI_RISK_RANKS } from '../../utils/riskProfiler';
-import { computeCombinedPortfolioStats } from '../../utils/household';
-import { LanguageToggle } from '../ui/LanguageToggle';
-import { translateExplanation, getLanguageFontClass } from '../../utils/translations';
+import { getUpcomingPayouts } from '../../utils/incomeCalendar';
 
 export const DashboardPage: React.FC = () => {
   const { 
@@ -33,18 +31,18 @@ export const DashboardPage: React.FC = () => {
     healthScore,
     healthScoreBreakdown,
     healthScoreEvents,
+    userRiskCategory,
     setCurrentPage, 
     navigateTo,
     handleCasUpload,
     cancelCasUpload,
     uploadedCas,
-    nomineeStats,
-    riskCategory,
-    householdLink,
-    householdPartnerSummary,
+    householdLinks,
+    activeHouseholdLink,
     isHouseholdViewActive,
     setIsHouseholdViewActive,
-    preferredLanguage,
+    combinedHouseholdSummary,
+    hasActivePremiumAccess,
   } = useApp();
 
 
@@ -118,64 +116,32 @@ export const DashboardPage: React.FC = () => {
   const gaugeCircumference = Math.PI * GAUGE_R;
   const gaugeDashOffset = gaugeCircumference * (1 - healthScore / 100);
 
-  // Aggregate figures matching Image 2
-  const totalEquities = holdings
+  // Base individual figures
+  const myEquities = holdings
     .filter(h => h.category === 'equities')
-    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
+    .reduce((sum, h) => sum + h.currentValue, 0);
 
-  const totalBonds = holdings
+  const myBonds = holdings
     .filter(h => h.category === 'bonds')
-    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
+    .reduce((sum, h) => sum + h.currentValue, 0);
 
-  const totalReits = holdings
+  const myReits = holdings
     .filter(h => h.category === 'reits_invits')
-    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
+    .reduce((sum, h) => sum + h.currentValue, 0);
 
-  const totalValue = totalEquities + totalBonds + totalReits;
+  const myTotalValue = myEquities + myBonds + myReits;
 
-  // Combined Household figures
-  const combinedStats = useMemo(() => {
-    return computeCombinedPortfolioStats(holdings, householdPartnerSummary);
-  }, [holdings, householdPartnerSummary]);
-
-  const isHouseholdActive = Boolean(isHouseholdViewActive && householdLink?.status === 'accepted');
-  const displayTotalValue = isHouseholdActive ? combinedStats.combinedTotalValue : totalValue;
-  const displayEquities = isHouseholdActive ? combinedStats.combinedEquities : totalEquities;
-  const displayBonds = isHouseholdActive ? combinedStats.combinedBonds : totalBonds;
-  const displayReits = isHouseholdActive ? combinedStats.combinedReits : totalReits;
-  const displayEquitiesPct = isHouseholdActive
-    ? combinedStats.combinedEquitiesPct
-    : totalValue > 0 ? Number(((totalEquities / totalValue) * 100).toFixed(1)) : 0;
-  const displayBondsPct = isHouseholdActive
-    ? combinedStats.combinedBondsPct
-    : totalValue > 0 ? Number(((totalBonds / totalValue) * 100).toFixed(1)) : 0;
-  const displayReitsPct = isHouseholdActive
-    ? combinedStats.combinedReitsPct
-    : totalValue > 0 ? Number(((totalReits / totalValue) * 100).toFixed(1)) : 0;
-
-  // Upcoming Dividend / Coupon / Distribution Cashflow Items
-  const upcomingIncomeItems = useMemo(() => {
-    return (holdings || [])
-      .filter((h) => h.next_payout_date && (h.estimated_payout_amount || 0) > 0)
-      .map((h) => ({
-        id: h.id,
-        name: h.name,
-        ticker: h.ticker,
-        payoutType: (h.payout_type || (h.category === 'bonds' ? 'coupon' : h.category === 'reits_invits' ? 'distribution' : 'dividend')) as 'dividend' | 'coupon' | 'distribution',
-        estimatedAmount: h.estimated_payout_amount || 0,
-        payoutDate: h.next_payout_date!,
-        broker: h.broker,
-        depository: h.depository,
-      }))
-      .sort((a, b) => new Date(a.payoutDate).getTime() - new Date(b.payoutDate).getTime())
-      .slice(0, 5);
-  }, [holdings]);
-
-  const totalUpcomingIncome90Days = useMemo(() => {
-    return upcomingIncomeItems.reduce((sum, item) => sum + item.estimatedAmount, 0);
-  }, [upcomingIncomeItems]);
+  // Household / Combined figures if active
+  const isCombined = Boolean(isHouseholdViewActive && activeHouseholdLink && combinedHouseholdSummary);
+  const totalValue = isCombined && combinedHouseholdSummary ? combinedHouseholdSummary.combinedTotalValue : myTotalValue;
+  const totalEquities = isCombined && combinedHouseholdSummary ? combinedHouseholdSummary.combinedEquities : myEquities;
+  const totalBonds = isCombined && combinedHouseholdSummary ? combinedHouseholdSummary.combinedBonds : myBonds;
+  const totalReits = isCombined && combinedHouseholdSummary ? combinedHouseholdSummary.combinedReits : myReits;
 
   const topFlag = redFlags[0];
+
+  const upcomingPayouts = React.useMemo(() => getUpcomingPayouts(holdings, 5), [holdings]);
+  const totalUpcomingPayoutAmount = upcomingPayouts.reduce((sum, p) => sum + p.estimatedAmount, 0);
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans selection:bg-[#FCEEBB] overflow-x-hidden">
@@ -275,116 +241,74 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Household Perspective Switcher (Visible when Household Link is accepted) */}
-        {householdLink?.status === 'accepted' && (
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-[#EDE9DF] p-2.5 rounded-2xl shadow-xs">
-            <div className="flex items-center space-x-2 text-xs text-[#6B7280] px-2">
-              <Users className="w-4 h-4 text-[#C57D25]" />
-              <span>Portfolio Perspective:</span>
-            </div>
-            <div className="inline-flex rounded-xl bg-[#F6F4ED] p-1 border border-[#EDE9DF]">
-              <button
-                onClick={() => setIsHouseholdViewActive(false)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  !isHouseholdActive
-                    ? 'bg-white text-[#14213D] shadow-xs'
-                    : 'text-[#6B7280] hover:text-[#14213D]'
-                }`}
-              >
-                Individual ({uploadedCas?.investorName || 'My Portfolio'})
-              </button>
-              <button
-                onClick={() => setIsHouseholdViewActive(true)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                  isHouseholdActive
-                    ? 'bg-[#FFF8EE] text-[#C57D25] shadow-xs border border-[#F7E5C8]'
-                    : 'text-[#6B7280] hover:text-[#14213D]'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 text-[#C57D25]" />
-                <span>Combined Household ({householdLink.partnerName})</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Household View Active Notice Banner */}
-        {isHouseholdActive && (
-          <div className="mb-6 p-3.5 bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl flex items-center justify-between text-xs text-[#63451B]">
-            <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-[#C57D25] shrink-0" />
-              <span>
-                <strong>Household View Active:</strong> Aggregating your portfolio with {householdLink?.partnerName || 'Partner'}'s assets (₹{householdPartnerSummary?.totalValue.toLocaleString('en-IN')}). Holding-level privacy is preserved.
-              </span>
-            </div>
-            <button
-              onClick={() => setCurrentPage('settings')}
-              className="text-[#C57D25] font-bold hover:underline cursor-pointer ml-3 shrink-0"
-            >
-              Manage Link &rarr;
-            </button>
-          </div>
-        )}
-
-        {/* Top Portfolio Header matching Image 2 EXACTLY */}
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+        {/* Top Portfolio Header with Household Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <div className="text-sm font-semibold uppercase tracking-wider text-[#8B93A7] mb-1">
-              {isHouseholdActive
-                ? `total household portfolio value (${uploadedCas?.investorName || 'You'} + ${householdLink?.partnerName || 'Partner'})`
-                : `total portfolio value ${uploadedCas ? `(${uploadedCas.investorName})` : ''}`}
+            <div className="text-sm font-semibold uppercase tracking-wider text-[#8B93A7] mb-1 flex items-center gap-2">
+              <span>{isCombined ? `Combined Household Net Worth (${combinedHouseholdSummary?.partnerName || 'Family'})` : 'Total Portfolio Value'}</span>
+              {isCombined && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8]">
+                  Household View
+                </span>
+              )}
+              {!isCombined && uploadedCas && <span className="text-[#C57D25]">({uploadedCas.investorName})</span>}
             </div>
             <div className="text-4xl sm:text-5xl font-extrabold font-mono-num text-[#14213D] tracking-tight">
-              ₹{displayTotalValue.toLocaleString('en-IN')}
+              ₹{totalValue.toLocaleString('en-IN')}
             </div>
-          </div>
-
-          {/* Top Right Controls: SEBI Risk Profile + Health Score */}
-          <div className="flex flex-wrap items-stretch gap-3">
-            {/* SEBI Risk Profile Badge Card */}
-            {riskCategory ? (() => {
-              const riskTokens = getSebiRiskVisualTokens(riskCategory);
-              return (
-                <div
-                  onClick={() => setCurrentPage('settings')}
-                  className={`${riskTokens.bg} border ${riskTokens.border} rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer ${riskTokens.hoverBorder} transition-colors flex-1 sm:w-44 min-w-[140px]`}
-                  title="SEBI Riskometer Profile — Click to edit in Settings"
-                >
-                  <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
-                    risk profile
-                  </div>
-                  <div className={`text-2xl sm:text-3xl font-extrabold ${riskTokens.text} font-mono-num text-center`}>
-                    {riskCategory}
-                  </div>
-                  <div className="text-[10px] font-bold text-[#8B93A7] mt-1 uppercase tracking-wider">
-                    Riskometer: {SEBI_RISK_RANKS[riskCategory] || 3}/6
-                  </div>
-                </div>
-              );
-            })() : (
-              <div
-                onClick={() => setCurrentPage('settings')}
-                className="bg-white border border-dashed border-[#EDE9DF] hover:border-[#C57D25] rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer transition-colors flex-1 sm:w-44 min-w-[140px]"
-                title="SEBI Risk Profile — Click to complete in Settings"
-              >
-                <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
-                  risk profile
-                </div>
-                <div className="text-base sm:text-lg font-extrabold text-[#8B93A7] text-center my-0.5">
-                  Not Assessed
-                </div>
-                <div className="text-[10px] font-bold text-[#C57D25] mt-0.5 flex items-center gap-1 hover:underline">
-                  Complete in Settings &rarr;
-                </div>
+            {isCombined && combinedHouseholdSummary && (
+              <div className="text-xs text-[#8B93A7] mt-1">
+                You: ₹{combinedHouseholdSummary.myTotalValue.toLocaleString('en-IN')} • Partner: ₹{combinedHouseholdSummary.partnerTotalValue.toLocaleString('en-IN')}
               </div>
             )}
+          </div>
 
-            {/* Health Score Badge Card top right */}
+          {/* Household View Switcher & Health Score Badges */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Household Switcher Pill (available when accepted link exists) */}
+            {activeHouseholdLink && (
+              <div className="bg-[#F6F4ED] p-1 rounded-xl border border-[#EDE9DF] flex items-center shrink-0">
+                <button
+                  onClick={() => setIsHouseholdViewActive(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    !isHouseholdViewActive
+                      ? 'bg-white text-[#14213D] shadow-xs'
+                      : 'text-[#6B7280] hover:text-[#14213D]'
+                  }`}
+                >
+                  Individual View
+                </button>
+                <button
+                  onClick={() => setIsHouseholdViewActive(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                    isHouseholdViewActive
+                      ? 'bg-white text-[#C57D25] shadow-xs'
+                      : 'text-[#6B7280] hover:text-[#14213D]'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-[#C57D25]" />
+                  <span>Household View</span>
+                </button>
+              </div>
+            )}
+            <div 
+              onClick={() => setCurrentPage('settings')}
+              className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-4 sm:px-6 sm:py-3 flex flex-col items-center justify-center shadow-xs cursor-pointer hover:border-[#C57D25] transition-colors"
+            >
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#8B93A7] mb-0.5">
+                risk profile
+              </div>
+              <div className={`text-lg font-extrabold ${userRiskCategory === 'Low' || userRiskCategory === 'Low to Moderate' ? 'text-[#2BB673]' : userRiskCategory === 'Very High' ? 'text-[#EF4444]' : 'text-[#C57D25]'}`}>
+                {userRiskCategory}
+              </div>
+              <span className="text-[11px] text-[#8B93A7] mt-0.5 font-medium">SEBI Riskometer</span>
+            </div>
+
             <div 
               onClick={() => setCurrentPage('red-flags')}
-              className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-xs cursor-pointer hover:border-[#C57D25] transition-colors flex-1 sm:w-44 min-w-[140px]"
+              className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-4 sm:px-6 sm:py-3 flex flex-col items-center justify-center shadow-xs cursor-pointer hover:border-[#C57D25] transition-colors"
             >
-              <div className="text-sm font-semibold text-[#8B93A7] mb-0.5">
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#8B93A7] mb-0.5">
                 health score
               </div>
               <div className="text-3xl font-extrabold text-[#C57D25] font-mono-num">
@@ -399,7 +323,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {uploadedCas && !isHouseholdActive && (
+        {uploadedCas && (
           <div className="mb-8 bg-white rounded-2xl border border-[#EDE9DF] p-5 shadow-xs">
             <div className="grid gap-3 sm:grid-cols-3 text-xs text-[#6B7280]">
               <div>
@@ -436,45 +360,59 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
 
+        {/* Household Privacy Banner when in Combined View */}
+        {isCombined && (
+          <div className="mb-6 p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] flex items-center justify-between text-xs text-[#6B7280]">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-4 h-4 text-[#2BB673] shrink-0" />
+              <span>
+                {combinedHouseholdSummary?.canViewPartnerHoldings
+                  ? 'Detailed holding sharing is active per mutual 2-way consent.'
+                  : 'Holding-level line items are protected by zero-knowledge consent. Showing aggregate net worth & asset allocation.'}
+              </span>
+            </div>
+            <button
+              onClick={() => setCurrentPage('settings')}
+              className="text-[#C57D25] hover:text-[#B06C19] font-bold underline cursor-pointer shrink-0"
+            >
+              Manage Link →
+            </button>
+          </div>
+        )}
+
         {/* 3 Asset Class Summary Boxes matching Image 2 EXACTLY */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           
           {/* Equities Card */}
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
-            <div className="text-sm font-medium text-[#8B93A7] mb-1">
-              {isHouseholdActive ? 'combined equities' : 'equities'}
-            </div>
+            <div className="text-sm font-medium text-[#8B93A7] mb-1">equities</div>
             <div className="text-2xl font-bold font-mono-num text-[#14213D]">
-              ₹{displayEquities.toLocaleString('en-IN')}
+              ₹{totalEquities.toLocaleString('en-IN')}
             </div>
             <div className="text-sm text-[#6B7280] mt-1 font-medium">
-              {displayEquitiesPct}% of portfolio
+              {totalValue > 0 ? ((totalEquities / totalValue) * 100).toFixed(1) : 0}% of portfolio
             </div>
           </div>
 
           {/* Bonds Card */}
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
-            <div className="text-sm font-medium text-[#8B93A7] mb-1">
-              {isHouseholdActive ? 'combined bonds / g-secs' : 'bonds'}
-            </div>
+            <div className="text-sm font-medium text-[#8B93A7] mb-1">bonds</div>
             <div className="text-2xl font-bold font-mono-num text-[#14213D]">
-              ₹{displayBonds.toLocaleString('en-IN')}
+              ₹{totalBonds.toLocaleString('en-IN')}
             </div>
             <div className="text-sm text-[#6B7280] mt-1 font-medium">
-              {displayBondsPct}% of portfolio
+              {totalValue > 0 ? ((totalBonds / totalValue) * 100).toFixed(1) : 0}% of portfolio
             </div>
           </div>
 
           {/* REITs / InvITs Card */}
           <div className="bg-[#F6F4ED] rounded-2xl p-5 border border-[#EDE9DF]">
-            <div className="text-sm font-medium text-[#8B93A7] mb-1">
-              {isHouseholdActive ? 'combined REITs / InvITs' : 'REITs / InvITs'}
-            </div>
+            <div className="text-sm font-medium text-[#8B93A7] mb-1">REITs / InvITs</div>
             <div className="text-2xl font-bold font-mono-num text-[#14213D]">
-              ₹{displayReits.toLocaleString('en-IN')}
+              ₹{totalReits.toLocaleString('en-IN')}
             </div>
             <div className="text-sm text-[#6B7280] mt-1 font-medium">
-              {displayReitsPct}% of portfolio
+              {totalValue > 0 ? ((totalReits / totalValue) * 100).toFixed(1) : 0}% of portfolio
             </div>
           </div>
 
@@ -490,59 +428,15 @@ export const DashboardPage: React.FC = () => {
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <h3 className={`font-bold text-base text-[#991B1B] ${getLanguageFontClass(preferredLanguage)}`}>
-                {translateExplanation(topFlag.title, preferredLanguage)}
+              <h3 className="font-bold text-base text-[#991B1B]">
+                {topFlag.title}
               </h3>
-              <p className={`text-sm text-[#7F1D1D] mt-1 leading-relaxed ${getLanguageFontClass(preferredLanguage)}`}>
-                {translateExplanation(topFlag.description, preferredLanguage)}
+              <p className="text-sm text-[#7F1D1D] mt-1 leading-relaxed">
+                {topFlag.description}
               </p>
             </div>
           </div>
         )}
-
-        {/* Nomination & Estate Readiness Card — shown whenever there are holdings */}
-        {nomineeStats.total > 0 && (() => {
-          const allConfirmed = nomineeStats.confirmed === nomineeStats.total && nomineeStats.total > 0;
-          const anyMissing   = nomineeStats.missing > 0;
-          // anyMissing → red; allConfirmed → emerald; otherwise (unset) → gold
-          const cardBg      = allConfirmed ? 'bg-[#F0FDF4]' : anyMissing ? 'bg-[#FDF2F2]' : 'bg-[#FFF8EE]';
-          const cardBorder  = allConfirmed ? 'border-[#6EE7B7]' : anyMissing ? 'border-[#FCA5A5]' : 'border-[#F7E5C8]';
-          const hoverBorder = allConfirmed ? 'hover:border-[#2BB673]' : anyMissing ? 'hover:border-[#EF4444]' : 'hover:border-[#C57D25]';
-          const iconBg      = allConfirmed ? 'bg-[#2BB673]/10 border-[#6EE7B7] text-[#2BB673]' : anyMissing ? 'bg-[#EF4444]/10 border-[#FCA5A5] text-[#EF4444]' : 'bg-[#C57D25]/10 border-[#F7E5C8] text-[#C57D25]';
-          const headingColor = allConfirmed ? 'text-[#166534]' : anyMissing ? 'text-[#991B1B]' : 'text-[#92400E]';
-          const bodyColor    = allConfirmed ? 'text-[#166534]' : anyMissing ? 'text-[#7F1D1D]' : 'text-[#78350F]';
-
-          const summaryLine = allConfirmed
-            ? `All ${nomineeStats.total} account${nomineeStats.total !== 1 ? 's have' : ' has'} a nominee registered`
-            : `${nomineeStats.confirmed} of ${nomineeStats.total} account${nomineeStats.total !== 1 ? 's have' : ' has'} a nominee registered`;
-
-          const explainLine = allConfirmed
-            ? 'Your family can access all holdings without a court-order claim process in the event of estate transfer.'
-            : nomineeStats.firstMissingHoldingName
-              ? `Without a nominee, your ${nomineeStats.firstMissingHoldingName} holding may require a lengthy legal claim process for your family to access funds.`
-              : 'Confirm nominee status for each account in Settings to protect your family from a lengthy legal claim process.';
-
-          return (
-            <div
-              onClick={() => setCurrentPage('settings')}
-              className={`mb-8 ${cardBg} border ${cardBorder} rounded-2xl p-5 flex items-start space-x-4 shadow-xs cursor-pointer ${hoverBorder} transition-colors`}
-            >
-              <div className={`w-8 h-8 rounded-lg ${iconBg} border flex items-center justify-center shrink-0 mt-0.5`}>
-                {allConfirmed
-                  ? <UserCheck className="w-5 h-5" />
-                  : <UserX className="w-5 h-5" />}
-              </div>
-              <div className="flex-1">
-                <h3 className={`font-bold text-base ${headingColor} ${getLanguageFontClass(preferredLanguage)}`}>
-                  {translateExplanation(`Nomination & Estate Readiness — ${summaryLine}`, preferredLanguage)}
-                </h3>
-                <p className={`text-sm ${bodyColor} mt-1 leading-relaxed ${getLanguageFontClass(preferredLanguage)}`}>
-                  {translateExplanation(explainLine, preferredLanguage)}
-                </p>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Portfolio Guardian Proactive Event Scan Feed */}
         <div className="mb-8">
@@ -650,9 +544,9 @@ export const DashboardPage: React.FC = () => {
                 const isExpanded = expandedFactor === itemKey;
                 const penaltyVal = factor.penaltyOrBonus ?? factor.penalty ?? 0;
                 const isBonus    = penaltyVal > 0;
-                const displayFactorName = translateExplanation(factor.factor || factor.label || 'Risk Factor', preferredLanguage);
-                const displayReason = translateExplanation(factor.reason || factor.description || '', preferredLanguage);
-                const displaySuggestion = translateExplanation(factor.suggestion || factor.reason || '', preferredLanguage);
+                const displayFactorName = factor.factor || factor.label || 'Risk Factor';
+                const displayReason = factor.reason || factor.description || '';
+                const displaySuggestion = factor.suggestion || factor.reason || '';
 
                 return (
                   <div
@@ -671,8 +565,8 @@ export const DashboardPage: React.FC = () => {
                       </div>
                       {/* Label + description */}
                       <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-bold text-[#14213D] truncate ${getLanguageFontClass(preferredLanguage)}`}>{displayFactorName}</div>
-                        <div className={`text-xs text-[#8B93A7] truncate ${getLanguageFontClass(preferredLanguage)}`}>{displayReason}</div>
+                        <div className="text-sm font-bold text-[#14213D] truncate">{displayFactorName}</div>
+                        <div className="text-xs text-[#8B93A7] truncate">{displayReason}</div>
                       </div>
                       {/* Penalty chip + chevron */}
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -694,7 +588,7 @@ export const DashboardPage: React.FC = () => {
                     {/* Expanded suggestion */}
                     {isExpanded && (
                       <div className="mt-2.5 ml-10 p-3 bg-[#FFF8EE] border border-[#F7E5C8] rounded-xl">
-                        <p className={`text-sm text-[#63451B] leading-relaxed ${getLanguageFontClass(preferredLanguage)}`}>{displaySuggestion}</p>
+                        <p className="text-sm text-[#63451B] leading-relaxed">{displaySuggestion}</p>
                         {factor.sebiRuleRef && (
                           <p className="text-xs text-[#8B93A7] mt-1.5 font-mono">{factor.sebiRuleRef}</p>
                         )}
@@ -729,6 +623,86 @@ export const DashboardPage: React.FC = () => {
             ) : null;
           })()}
 
+        </div>
+
+        {/* Upcoming Income Calendar Card */}
+        <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 shadow-xs mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-[#EDE9DF]">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] flex items-center justify-center font-bold">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25]">Cash Flow Forecast</div>
+                <h3 className="font-extrabold text-base text-[#14213D]">Upcoming Income</h3>
+              </div>
+            </div>
+            {upcomingPayouts.length > 0 && (
+              <div className="text-left sm:text-right">
+                <span className="text-[11px] text-[#8B93A7] uppercase font-semibold block">Total Scheduled</span>
+                <span className="font-extrabold text-base font-mono-num text-[#2BB673]">
+                  ₹{totalUpcomingPayoutAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {upcomingPayouts.length === 0 ? (
+            <div className="p-4 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs text-[#6B7280] text-center">
+              No upcoming dividend or coupon payouts scheduled for your current holdings.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-[#EDE9DF] text-[#8B93A7] uppercase tracking-wider font-semibold text-xs">
+                    <th className="py-2.5 px-2">Instrument</th>
+                    <th className="py-2.5 px-2">Payout Type</th>
+                    <th className="py-2.5 px-2">Estimated Amount</th>
+                    <th className="py-2.5 px-2 text-right">Expected Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F1EFE9]">
+                  {upcomingPayouts.map((payout) => (
+                    <tr 
+                      key={`${payout.holdingId}-${payout.payoutDate}`}
+                      onClick={() => setCurrentPage('holdings')}
+                      className="hover:bg-[#FAF8F5] transition-colors cursor-pointer"
+                    >
+                      <td className="py-3 px-2 font-bold text-[#14213D]">
+                        <div>{payout.holdingName}</div>
+                        <div className="text-xs text-[#8B93A7] font-mono">{payout.ticker}</div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase border ${
+                          payout.payoutType === 'coupon'
+                            ? 'bg-[#EBF5FF] text-[#1D4ED8] border-[#BFDBFE]'
+                            : payout.payoutType === 'distribution'
+                            ? 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]'
+                            : 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]'
+                        }`}>
+                          {payout.payoutType}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 font-mono-num font-bold text-[#14213D]">
+                        ₹{payout.estimatedAmount.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        <div className="font-semibold text-xs text-[#14213D]">
+                          {new Date(payout.payoutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        {payout.daysRemaining !== undefined && (
+                          <div className="text-[11px] text-[#8B93A7]">
+                            {payout.daysRemaining <= 0 ? 'Due today' : `in ${payout.daysRemaining} days`}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Portfolio Story & Score History Timeline */}
@@ -792,93 +766,6 @@ export const DashboardPage: React.FC = () => {
             <ArrowRight className="w-4 h-4 text-[#8B93A7] group-hover:text-[#14213D] transition-colors" />
           </div>
 
-        </div>
-
-        {/* Dividend & Coupon Upcoming Income Calendar Card */}
-        <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 shadow-xs mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-[#F1EFE9]">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                <Calendar className="w-4 h-4 text-[#C57D25]" />
-                <span>Cash Flow &amp; Distribution Schedule</span>
-              </div>
-              <h3 className="font-extrabold text-base text-[#14213D] mt-1">
-                Upcoming Income Calendar
-              </h3>
-            </div>
-
-            {upcomingIncomeItems.length > 0 && (
-              <div className="flex items-center space-x-2 bg-[#FFF8EE] border border-[#F7E5C8] px-3.5 py-1.5 rounded-xl">
-                <span className="text-xs text-[#8B93A7] font-semibold">Upcoming Total:</span>
-                <span className="font-extrabold font-mono-num text-sm text-[#2BB673]">
-                  +₹{totalUpcomingIncome90Days.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {upcomingIncomeItems.length === 0 ? (
-            /* Plain one-line empty state pattern */
-            <div className="p-6 bg-[#FAF8F5] border border-dashed border-[#EDE9DF] rounded-2xl text-center text-xs text-[#8B93A7]">
-              <Calendar className="w-6 h-6 mx-auto text-[#8B93A7] mb-2" />
-              <p className="font-bold text-[#14213D]">No upcoming dividend or coupon payouts scheduled</p>
-              <p className="text-[#6B7280] mt-0.5">
-                Payout dates and estimated cash distributions will appear here as corporate actions and bond coupon dates approach.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-[#EDE9DF] text-[#8B93A7] uppercase tracking-wider font-semibold text-xs">
-                    <th className="py-3 px-2">Instrument</th>
-                    <th className="py-3 px-2">Payout Type</th>
-                    <th className="py-3 px-2 text-right">Estimated Cashflow</th>
-                    <th className="py-3 px-2 text-right">Scheduled Payout Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F1EFE9]">
-                  {upcomingIncomeItems.map((item) => {
-                    const formattedDate = new Date(item.payoutDate).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    });
-
-                    return (
-                      <tr 
-                        key={item.id}
-                        onClick={() => setCurrentPage('holdings')}
-                        className="hover:bg-[#FAF8F5] transition-colors cursor-pointer"
-                      >
-                        <td className="py-3.5 px-2 font-bold text-[#14213D]">
-                          <div>{item.name}</div>
-                          <div className="text-xs text-[#8B93A7] font-mono">{item.ticker} • {item.broker}</div>
-                        </td>
-                        <td className="py-3.5 px-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
-                            item.payoutType === 'coupon'
-                              ? 'bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0]'
-                              : item.payoutType === 'distribution'
-                              ? 'bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8]'
-                              : 'bg-[#FAF8F5] text-[#14213D] border border-[#EDE9DF]'
-                          }`}>
-                            {item.payoutType}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-2 text-right font-mono-num font-extrabold text-[#2BB673]">
-                          +₹{item.estimatedAmount.toLocaleString('en-IN')}
-                        </td>
-                        <td className="py-3.5 px-2 text-right font-mono-num font-medium text-[#14213D]">
-                          {formattedDate}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
         {/* Portfolio Holdings Summary Table */}

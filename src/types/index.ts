@@ -14,12 +14,12 @@ export type PageId =
   | 'shock-sandbox'
   | 'peer-benchmark'
   | 'retrospective'
-  | 'ipo-screener'
   | 'broker-console'
   | 'compliance'
   | 'admin'
   | 'settings'
-  | 'onboarding';
+  | 'onboarding'
+  | 'ipo-screener';
 
 export type UserRole =
   | 'investor_free'
@@ -28,15 +28,7 @@ export type UserRole =
   | 'compliance_officer'
   | 'admin';
 
-export type AssetCategory = 'equities' | 'bonds' | 'reits_invits' | 'mutual_funds' | 'cash';
-
-/** Single source of truth for all Premium-gated pages */
-export const PREMIUM_PAGES: PageId[] = [
-  'shock-sandbox',
-  'peer-benchmark',
-  'retrospective',
-  'ipo-screener',
-];
+export type AssetCategory = 'equities' | 'bonds' | 'reits_invits' | 'cash';
 
 /** Which pages each role can access */
 export const ROLE_PERMISSIONS: Record<UserRole, {
@@ -55,13 +47,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     description: 'Upload CAS, view own unified dashboard, see own red flags & basic explainability.',
     seesClientPii: false,
     defaultLandingPage: 'dashboard',
-    premiumGated: PREMIUM_PAGES,
+    premiumGated: ['shock-sandbox', 'peer-benchmark', 'retrospective', 'ipo-screener'],
   },
   investor_premium: {
     canAccess: ['dashboard', 'holdings', 'explainability', 'red-flags', 'shock-sandbox', 'peer-benchmark', 'retrospective', 'ipo-screener', 'settings'],
     cannotAccess: ['broker-console', 'compliance', 'admin'],
     label: 'Investor (Premium)',
-    description: 'Everything Free has, plus Shock Sandbox, Peer Benchmarking, Retrospective Simulator, cash-flow optimization, and IPO Suitability Screener.',
+    description: 'Everything Free has, plus Shock Sandbox, Peer Benchmarking, Retrospective Simulator, cash-flow optimization.',
     seesClientPii: false,
     defaultLandingPage: 'dashboard',
     premiumGated: [],
@@ -99,7 +91,17 @@ export interface AuditLogEntry {
   id: string;
   timestamp: string;
   officerName: string;
-  action: 'drill_into_client' | 'export_audit_trail' | 'toggle_pii' | 'rule_threshold_change' | 'broker_onboarded' | 'broker_revoked' | 'broker_restored';
+  action:
+    | 'drill_into_client'
+    | 'export_audit_trail'
+    | 'toggle_pii'
+    | 'rule_threshold_change'
+    | 'broker_onboarded'
+    | 'broker_revoked'
+    | 'broker_restored'
+    | 'broker_whitelist_add'
+    | 'broker_whitelist_revoke'
+    | 'broker_whitelist_restore';
   targetEntityId: string;
   targetEntityName: string;
   reason?: string;
@@ -126,45 +128,15 @@ export interface AccountAggregatorSession {
   expiresAt: string;
 }
 
-/**
- * SEBI's standard 6-tier Riskometer categories for market-linked instruments & investor profiling.
- */
-export type SebiRiskCategory =
-  | 'Low'
-  | 'Low to Moderate'
-  | 'Moderate'
-  | 'Moderately High'
-  | 'High'
-  | 'Very High';
-
-export interface RiskProfilerAnswers {
-  horizon: string;          // e.g. '<1yr', '1-3yr', '3-5yr', '5-10yr', '>10yr'
-  incomeStability: string;  // e.g. 'unpredictable', 'moderate', 'stable', 'high_surplus'
-  experience: string;       // e.g. 'none', 'mf_sip', 'direct_equity', 'active_derivatives'
-  lossReaction: string;     // e.g. 'panic_sell', 'anxious_trim', 'hold_calm', 'buy_dip'
-  liquidityNeed: string;    // e.g. 'immediate', 'partial_1_2yr', 'fully_buffered'
-}
-
-export interface RiskProfilerQuestionOption {
-  value: string;
-  label: string;
-  sublabel?: string;
-  score: number; // 1 to 5 points
-}
-
-export interface RiskProfilerQuestion {
-  id: keyof RiskProfilerAnswers;
-  title: string;
-  subtitle: string;
-  options: RiskProfilerQuestionOption[];
-}
-
 export interface HoldingItem {
   id: string;
   name: string;
   ticker: string;
+  isin?: string;
   category: AssetCategory;
   broker: string;
+  broker_reg_number?: string | null;
+  rm_name?: string | null;
   depository: 'CDSL' | 'NSDL';
   units: number;
   avgPrice: number;
@@ -174,14 +146,11 @@ export interface HoldingItem {
   lockInMonths: number;
   liquidity_terms?: string;
   yieldPct?: number;
-  riskCategory: SebiRiskCategory;
+  riskCategory: 'Low' | 'Moderate' | 'High' | 'Very High';
   suitabilityScore: number;
-  expense_ratio_pct?: number | null;
-  exit_load_pct?: number | null;
-  brokerage_pct?: number | null;
-  benchmark_expense_ratio_pct?: number | null;
-  broker_reg_number?: string | null;
-  rm_name?: string | null;
+  expense_ratio_pct?: number;
+  exit_load_pct?: number;
+  brokerage_pct?: number;
   next_payout_date?: string | null;
   payout_type?: 'dividend' | 'coupon' | 'distribution' | null;
   estimated_payout_amount?: number | null;
@@ -190,18 +159,6 @@ export interface HoldingItem {
     mechanism: string;
     impact: string;
   };
-}
-
-/**
- * Self-reported nominee registration status per broker/account.
- * Stored in localStorage — CAS statements do not reliably include this.
- * null  = user has not yet confirmed ("not yet confirmed")
- * true  = user has confirmed a nominee is registered
- * false = user has confirmed no nominee is registered (risk)
- */
-export interface AccountNomineeStatus {
-  broker: string;
-  nominee_registered: boolean | null;
 }
 
 export interface RedFlagAlert {
@@ -214,10 +171,12 @@ export interface RedFlagAlert {
   description: string;
   suggestedAction: string;
   sebiRuleRef: string;
-  status?: 'active' | 'resolved' | 'acknowledged';
   broker_reg_number?: string | null;
   rm_name?: string | null;
+  status?: 'active' | 'resolved' | 'acknowledged';
 }
+
+import type { SebiRiskCategory } from '../utils/riskProfiler';
 
 export interface ClientProfile {
   id: string;
@@ -228,12 +187,12 @@ export interface ClientProfile {
   healthScore: number;
   flagCount: number;
   riskProfile: 'Conservative' | 'Moderate' | 'Aggressive';
+  riskCategory?: SebiRiskCategory;
   topFlag: string;
   lastUpdated: string;
   assignedRM: string;
   investmentTimeline?: string;
   monthly_expenses_estimate?: number | null;
-  preferred_language?: 'en' | 'ta';
 }
 
 export type SuitabilityReportStatus = 'generated' | 'reviewed' | 'acknowledged';
@@ -481,75 +440,37 @@ export interface GuardianAlert {
   createdAt: string;
 }
 
-// ── Household / Family View Types ──────────────────────────────────────────
+export type { HouseholdLink, CombinedHouseholdSummary } from '../utils/household';
+export type { UpcomingIssue } from '../data/upcomingIssues';
+export type { IpoScreeningResult } from '../utils/ipoScreener';
 
-export type HouseholdLinkStatus = 'pending' | 'accepted' | 'revoked';
-
-export interface HouseholdLink {
+// ── Upload History ────────────────────────────────────────────────────────────
+export interface CasUploadAuditRow {
   id: string;
-  userIdA: string;
-  userIdB: string;
-  status: HouseholdLinkStatus;
-  requestedBy: string;
-  partnerEmail: string;
-  partnerName: string;
-  shareDetailsA: boolean;
-  shareDetailsB: boolean;
-  requestedAt: string;
-  acceptedAt?: string | null;
+  created_at: string;
+  parsed_name: string | null;
+  profile_name: string | null;
+  similarity: number | null;
+  outcome: string | null;
+  total_portfolio_value: number | null;
+  holdings_count: number | null;
+  health_score_at_upload: number | null;
 }
 
-export interface HouseholdPartnerSummary {
-  partnerName: string;
-  partnerEmail: string;
-  totalValue: number;
-  equitiesValue: number;
-  bondsValue: number;
-  reitsValue: number;
-  mutualFundsValue: number;
-  cashValue: number;
-  holdingsCount: number;
-  canViewDetails: boolean;
-  partnerHoldings?: HoldingItem[];
+// ── Whitelisted Brokers ───────────────────────────────────────────────────────
+export interface WhitelistedBroker {
+  id: string;
+  org_name: string;
+  integration_type: string;
+  sebi_reg_number?: string | null;
+  contact_email?: string | null;
+  status: 'active' | 'revoked';
+  onboarded_at: string;
+  onboarded_by?: string | null;
+  revoked_at?: string | null;
+  revoked_by?: string | null;
+  updated_at?: string | null;
 }
-
-// ── IPO / NFO Suitability Screener Types ────────────────────────────────────
-
-export interface IpoSuitabilityCausalChain {
-  cause: string;
-  mechanism: string;
-  impact: string;
-}
-
-export type IpoSuitabilityVerdict = 'suitable' | 'caution' | 'warning';
-
-export interface IpoSuitabilityResult {
-  verdict: IpoSuitabilityVerdict;
-  headline: string;
-  description: string;
-  existingSectorAllocationPct: number;
-  existingAssetClassAllocationPct: number;
-  simulatedSectorAllocationPct: number;
-  simulatedAssetClassAllocationPct: number;
-  riskMatch: boolean;
-  userRiskCategory: SebiRiskCategory | null;
-  issueRiskCategory: SebiRiskCategory;
-  causalChain?: IpoSuitabilityCausalChain;
-  warnings: string[];
-  diversificationBenefits: string[];
-}
-
-// ── Broker / RM Credential Validation Types ─────────────────────────────────
-
-export interface SebiRegValidationResult {
-  isValid: boolean;
-  regNumber: string;
-  prefix?: string;
-  intermediaryType?: string;
-  status: 'valid_format' | 'invalid_format' | 'missing';
-  explanation: string;
-}
-
 
 
 

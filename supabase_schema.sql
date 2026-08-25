@@ -5,20 +5,15 @@
 
 -- ── 1. profiles table ─────────────────────────────────────────────────────────
 create table if not exists public.profiles (
-  id            uuid references auth.users on delete cascade primary key,
-  full_name     text,
-  email         text,
-  pan           text,
-  plan                      text default 'free',
+  id                        uuid references auth.users on delete cascade primary key,
+  full_name                 text,
+  email                     text,
+  pan                       text,
+  plan                      text        not null default 'free',
   trial_ends_at             timestamptz,
   monthly_expenses_estimate numeric,
   created_at                timestamptz default now()
 );
-
--- Ensure columns exist if table was already created
-alter table public.profiles add column if not exists plan text default 'free';
-alter table public.profiles add column if not exists trial_ends_at timestamptz;
-alter table public.profiles add column if not exists monthly_expenses_estimate numeric;
 
 -- ── 2. RLS on profiles ────────────────────────────────────────────────────────
 alter table public.profiles enable row level security;
@@ -91,17 +86,26 @@ on conflict (id) do update
 
 -- ── 5. cas_upload_audit table ─────────────────────────────────────────────────
 create table if not exists public.cas_upload_audit (
-  id           uuid default gen_random_uuid() primary key,
-  user_id      uuid references auth.users on delete cascade not null,
-  created_at   timestamptz default now(),
-  parsed_name  text,
-  profile_name text,
-  similarity   float,
-  profile_pan  text,
-  parsed_pan   text,
-  outcome      text,
-  details      jsonb
+  id                     uuid default gen_random_uuid() primary key,
+  user_id                uuid references auth.users on delete cascade not null,
+  created_at             timestamptz default now(),
+  parsed_name            text,
+  profile_name           text,
+  similarity             float,
+  profile_pan            text,
+  parsed_pan             text,
+  outcome                text,
+  details                jsonb,
+  -- Snapshot columns added for Upload History view
+  total_portfolio_value  numeric,
+  holdings_count         integer,
+  health_score_at_upload integer
 );
+
+-- Non-breaking migration for existing databases that already have the table
+alter table public.cas_upload_audit add column if not exists total_portfolio_value  numeric;
+alter table public.cas_upload_audit add column if not exists holdings_count         integer;
+alter table public.cas_upload_audit add column if not exists health_score_at_upload integer;
 
 -- ── 6. RLS on cas_upload_audit ────────────────────────────────────────────────
 alter table public.cas_upload_audit enable row level security;
@@ -121,6 +125,7 @@ create policy "Users can insert own audit rows"
 create policy "Users can delete own audit rows"
   on public.cas_upload_audit for delete
   using (auth.uid() = user_id);
+
 
 -- ── 7. scoring_thresholds table ───────────────────────────────────────────────
 create table if not exists public.scoring_thresholds (
@@ -319,21 +324,28 @@ create policy "Anyone authenticated can view audit log"
   to authenticated
   using (true);
 
--- ── 12. household_links table & RLS policies ───────────────────────────────────
+-- ── Migration: add trial & profile columns to profiles (safe for existing deployments) ──
+-- Run this block in Supabase SQL Editor if the table already exists without
+-- these columns (the CREATE TABLE above only runs for fresh installs).
+alter table public.profiles
+  add column if not exists plan                      text        not null default 'free',
+  add column if not exists trial_ends_at             timestamptz,
+  add column if not exists monthly_expenses_estimate numeric;
+
+-- ── 10. household_links table ───────────────────────────────────────────────────
 create table if not exists public.household_links (
-  id                  uuid default gen_random_uuid() primary key,
-  user_id_a           uuid references auth.users(id) on delete cascade not null,
-  user_id_b           uuid references auth.users(id) on delete cascade not null,
-  status              text not null default 'pending' check (status in ('pending', 'accepted', 'revoked')),
-  requested_by        uuid references auth.users(id) on delete cascade not null,
-  partner_email       text,
-  partner_name        text,
-  share_details_a     boolean default false,
-  share_details_b     boolean default false,
-  requested_at        timestamptz default now(),
-  accepted_at         timestamptz,
-  updated_at          timestamptz default now(),
-  constraint different_users check (user_id_a <> user_id_b)
+  id                uuid default gen_random_uuid() primary key,
+  user_id_a         uuid references auth.users(id) on delete cascade,
+  user_id_b         uuid references auth.users(id) on delete cascade,
+  user_a_email      text not null,
+  user_b_email      text not null,
+  status            text not null check (status in ('pending', 'accepted', 'revoked')) default 'pending',
+  requested_by      uuid references auth.users(id),
+  requested_at      timestamptz default now(),
+  accepted_at       timestamptz,
+  share_holdings_a  boolean default false,
+  share_holdings_b  boolean default false,
+  created_at        timestamptz default now()
 );
 
 alter table public.household_links enable row level security;
@@ -341,81 +353,53 @@ alter table public.household_links enable row level security;
 drop policy if exists "Users can view own household links" on public.household_links;
 drop policy if exists "Users can create household links" on public.household_links;
 drop policy if exists "Users can update own household links" on public.household_links;
-drop policy if exists "Users can delete own household links" on public.household_links;
 
 create policy "Users can view own household links"
   on public.household_links for select
-  using (auth.uid() = user_id_a or auth.uid() = user_id_b);
+  to authenticated
+  using (
+    auth.uid() = user_id_a or 
+    auth.uid() = user_id_b or 
+    lower(user_a_email) = lower(auth.jwt() ->> 'email') or 
+    lower(user_b_email) = lower(auth.jwt() ->> 'email')
+  );
 
 create policy "Users can create household links"
   on public.household_links for insert
-  with check (auth.uid() = requested_by and (auth.uid() = user_id_a or auth.uid() = user_id_b));
+  to authenticated
+  with check (auth.uid() = requested_by or auth.uid() = user_id_a);
 
 create policy "Users can update own household links"
   on public.household_links for update
-  using (auth.uid() = user_id_a or auth.uid() = user_id_b);
+  to authenticated
+  using (
+    auth.uid() = user_id_a or 
+    auth.uid() = user_id_b or
+    lower(user_a_email) = lower(auth.jwt() ->> 'email') or 
+    lower(user_b_email) = lower(auth.jwt() ->> 'email')
+  );
 
-create policy "Users can delete own household links"
-  on public.household_links for delete
-  using (auth.uid() = user_id_a or auth.uid() = user_id_b);
-
--- ── 13. upcoming_issues table for IPO/NFO Suitability Screener ─────────────────
+-- ── 11. upcoming_issues table (IPO / NFO / NCD Screener) ────────────────────────
 create table if not exists public.upcoming_issues (
-  id                  uuid default gen_random_uuid() primary key,
-  name                text not null,
-  ticker              text,
-  issue_type          text not null check (issue_type in ('IPO', 'NFO', 'FPO')),
-  asset_class         text not null check (asset_class in ('equities', 'bonds', 'reits_invits', 'mutual_funds')),
-  sector              text not null,
-  risk_category       text not null check (risk_category in ('Low', 'Low to Moderate', 'Moderate', 'Moderately High', 'High', 'Very High')),
-  lock_in_months      integer not null default 0,
-  price_range         text,
-  min_investment      numeric default 15000,
-  bidding_dates       text,
-  description         text,
-  created_at          timestamptz default now()
+  id              text primary key,
+  name            text not null,
+  issue_type      text not null,
+  asset_class     text not null,
+  sector          text not null,
+  risk_category   text not null,
+  description     text,
+  issue_dates     text,
+  price_range     text,
+  min_investment  numeric,
+  created_at      timestamptz default now()
 );
 
 alter table public.upcoming_issues enable row level security;
 
 drop policy if exists "Anyone authenticated can view upcoming issues" on public.upcoming_issues;
-drop policy if exists "Admins can manage upcoming issues" on public.upcoming_issues;
-
 create policy "Anyone authenticated can view upcoming issues"
   on public.upcoming_issues for select
-  using (true);
-
-create policy "Admins can manage upcoming issues"
-  on public.upcoming_issues for all
   to authenticated
-  using (
-    coalesce((auth.jwt()->'app_metadata'->>'role'), (auth.jwt()->'user_metadata'->>'role')) = 'admin'
-  );
-
--- Seed default upcoming IPOs and NFOs
-insert into public.upcoming_issues (name, ticker, issue_type, asset_class, sector, risk_category, lock_in_months, price_range, min_investment, bidding_dates, description)
-values
-  ('Brookfield Real Estate Income Trust NFO', 'BROOKFIELD-REIT', 'NFO', 'reits_invits', 'Real Estate & REITs', 'High', 0, '₹100 - ₹105', 15000, 'Sep 10 – Sep 14, 2026', 'Institutional Grade-A commercial office space portfolio with quarterly rental dividend distributions.'),
-  ('NTPC Green Energy Ltd IPO', 'NTPCGREEN', 'IPO', 'equities', 'Renewable Energy & Utilities', 'Moderate', 0, '₹102 - ₹108', 14850, 'Sep 18 – Sep 22, 2026', 'PSU-backed renewable solar and wind power generation utility with long-term 25-year PPAs.'),
-  ('SBI Sovereign Target Maturity G-Sec NFO 2034', 'SBIGSEC2034', 'NFO', 'bonds', 'Government Sovereign Bonds', 'Low', 0, '₹10 NAV Par', 5000, 'Sep 05 – Sep 19, 2026', 'Zero-credit risk sovereign debt fund targeting 2034 government security yields with indexation benefits.'),
-  ('Swiggy Ltd IPO', 'SWIGGY', 'IPO', 'equities', 'Consumer Tech & Platform', 'Very High', 0, '₹375 - ₹390', 14820, 'Sep 25 – Sep 29, 2026', 'Hyperlocal on-demand convenience and quick-commerce platform expanding dark store network.'),
-  ('Bharat Highways InvIT NFO', 'BHARATHWY', 'NFO', 'reits_invits', 'Infrastructure & InvITs', 'High', 36, '₹98 - ₹100', 25000, 'Oct 02 – Oct 06, 2026', 'HAM road asset portfolio offering toll and annuity cash flows with a 3-year initial lock-in window.')
-on conflict do nothing;
-
--- ── 14. Broker / RM Credentials & SEBI Registration Number columns ───────────
-alter table if exists public.user_portfolios
-  add column if not exists broker_reg_number text,
-  add column if not exists rm_name text;
-
-alter table if exists public.audit_logs
-  add column if not exists broker_reg_number text;
-
--- ── 15. Dividend & Coupon Payout Calendar columns ────────────────────────────
-alter table if exists public.user_portfolios
-  add column if not exists next_payout_date date,
-  add column if not exists payout_type text check (payout_type in ('dividend', 'coupon', 'distribution')),
-  add column if not exists estimated_payout_amount numeric;
-
-
+  using (true);
 
 

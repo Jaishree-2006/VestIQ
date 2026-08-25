@@ -1,112 +1,128 @@
-/**
- * Static financial glossary — fixed reference content, no backend required.
- * Each entry: the canonical term and a plain-English one-sentence definition
- * matching the tone used in existing explanation text throughout the app.
- */
-
 export interface GlossaryEntry {
   term: string;
   definition: string;
+  category?: 'instrument' | 'risk' | 'metric' | 'regulatory';
+  aliases?: string[];
 }
 
-/** Lookup key → GlossaryEntry. Keys are lowercase for case-insensitive matching. */
 export const GLOSSARY: Record<string, GlossaryEntry> = {
-  invit: {
-    term: 'InvIT',
-    definition:
-      'Infrastructure Investment Trust — a listed instrument that pools investor money to own and operate infrastructure assets like roads, power lines, or gas pipelines, paying out most income as regular distributions.',
+  'invit': {
+    term: 'InvIT (Infrastructure Investment Trust)',
+    definition: 'A pooled investment vehicle that owns and manages revenue-generating infrastructure assets (like power grids, toll roads) and distributes periodic income to unit holders.',
+    category: 'instrument',
+    aliases: ['invit', 'invits', 'grid invit'],
   },
-  reit: {
-    term: 'REIT',
-    definition:
-      'Real Estate Investment Trust — a listed instrument that owns income-generating real estate (offices, malls, warehouses) and must distribute at least 90% of its net distributable cash flow to unitholders.',
+  'reit': {
+    term: 'REIT (Real Estate Investment Trust)',
+    definition: 'A company that owns, operates, or finances income-producing real estate properties (like office parks, commercial complexes) and distributes regular rental income to investors.',
+    category: 'instrument',
+    aliases: ['reit', 'reits'],
   },
-  ncd: {
-    term: 'NCD',
-    definition:
-      'Non-Convertible Debenture — a fixed-income bond issued by a company that pays a set interest rate and cannot be converted into equity shares, making it purely a debt instrument.',
+  'ncd': {
+    term: 'NCD (Non-Convertible Debenture)',
+    definition: 'A fixed-income debt instrument issued by companies to raise capital that cannot be converted into equity shares, offering fixed coupon returns.',
+    category: 'instrument',
+    aliases: ['ncd', 'ncds', 'debenture'],
   },
   'expense ratio': {
-    term: 'Expense Ratio',
-    definition:
-      'The annual percentage of your invested amount charged by a mutual fund or ETF to cover management, administration, and distribution costs — deducted directly from the fund\'s NAV.',
-  },
-  ter: {
-    term: 'TER (Total Expense Ratio)',
-    definition:
-      'Total Expense Ratio — the all-in annual cost of holding a fund, expressed as a percentage of AUM, covering fund management fees, trustee fees, and SEBI-mandated distributor commissions.',
+    term: 'Expense Ratio (TER)',
+    definition: 'The annual percentage fee charged by mutual funds and asset managers to cover administrative and operational costs, deducted directly from fund NAV.',
+    category: 'metric',
+    aliases: ['expense ratio', 'ter', 'expense ratio (ter)'],
   },
   'lock-in period': {
     term: 'Lock-in Period',
-    definition:
-      'A mandatory holding window during which you cannot redeem or sell an investment without incurring a penalty — common in ELSS funds (3 years), InvITs, and certain NCDs.',
-  },
-  'exit load': {
-    term: 'Exit Load',
-    definition:
-      'A fee charged when you redeem a mutual fund within a specified period (typically 1 year), expressed as a percentage of the redemption amount, to discourage short-term trading.',
-  },
-  nav: {
-    term: 'NAV',
-    definition:
-      'Net Asset Value — the per-unit price of a mutual fund calculated daily by dividing the total market value of all assets minus liabilities by the total number of units outstanding.',
+    definition: 'A mandatory minimum duration during which an investor cannot sell, redeem, or liquidate invested capital without restrictions or severe penalties.',
+    category: 'risk',
+    aliases: ['lock-in period', 'lock-in', 'lock in', 'locked-in'],
   },
   'suitability score': {
     term: 'Suitability Score',
-    definition:
-      'VestIQ\'s proprietary 0–100 rating that measures how well a holding matches your stated risk tolerance, investment horizon, and financial goals — higher is better.',
+    definition: 'A proprietary score (0–100) assessing whether an instrument fits your time horizon, risk profile, and liquidity requirements under SEBI guidelines.',
+    category: 'metric',
+    aliases: ['suitability score', 'suitability'],
   },
   'concentration risk': {
     term: 'Concentration Risk',
-    definition:
-      'The danger of having too much of your portfolio in a single holding, sector, or asset class — amplifying losses if that position underperforms.',
+    definition: 'The vulnerability of a portfolio to heavy losses when too much capital is concentrated in a single stock, sector, or asset class (typically >25%).',
+    category: 'risk',
+    aliases: ['concentration risk', 'concentration'],
   },
   'liquidity mismatch': {
     term: 'Liquidity Mismatch',
-    definition:
-      'A misalignment between when you may need your money (your investment horizon) and when a holding actually allows you to access it — for example, holding a 3-year locked-in InvIT when you need funds in 18 months.',
+    definition: 'A situation where your capital is tied up in illiquid or locked-in assets while your upcoming financial needs require liquid cash sooner.',
+    category: 'risk',
+    aliases: ['liquidity mismatch', 'liquidity horizon mismatch'],
   },
-  brokerage: {
-    term: 'Brokerage',
-    definition:
-      'The transaction fee charged by your broker each time you buy or sell an instrument, expressed as a percentage of the trade value or a flat fee per order.',
+  'nav': {
+    term: 'NAV (Net Asset Value)',
+    definition: 'The per-unit market value of a mutual fund or REIT calculated by dividing the total value of all its holdings minus liabilities by outstanding units.',
+    category: 'metric',
+    aliases: ['nav', 'net asset value'],
   },
-  scores: {
-    term: 'SCORES',
-    definition:
-      'SEBI Complaints Redress System — the official SEBI portal where retail investors can file grievances against brokers, mutual funds, or listed companies and track resolution.',
+  'exit load': {
+    term: 'Exit Load',
+    definition: 'A fractional penalty percentage charged by mutual funds if you redeem your units before a specified holding period (e.g. 1% if redeemed within 1 year).',
+    category: 'metric',
+    aliases: ['exit load', 'exit penalty'],
   },
   'health score': {
     term: 'Health Score',
-    definition:
-      'VestIQ\'s overall portfolio wellness rating (0–100) derived from diversification, suitability alignment, cost efficiency, and liquidity — updated each time you upload a fresh CAS.',
+    definition: 'VestIQ’s holistic portfolio safety rating (0–100) combining diversification, liquidity, concentration, and regulatory suitability factors.',
+    category: 'metric',
+    aliases: ['health score', 'portfolio health score'],
   },
   'causal chain': {
     term: 'Causal Chain',
-    definition:
-      'VestIQ\'s three-step explanation format — Root Cause → Transmission Mechanism → Projected Impact — that shows exactly why a holding creates risk and how that risk flows through to your portfolio value.',
+    definition: 'A 3-step explainability sequence (Trigger → Transmission Mechanism → Capital Impact) clarifying the exact structural cause of every portfolio risk.',
+    category: 'metric',
+    aliases: ['causal chain', 'causal-chain'],
   },
-  benchmark: {
-    term: 'Benchmark',
-    definition:
-      'A reference index (e.g. Nifty 50 or a category average) against which a fund\'s performance or cost is compared to judge whether it is delivering value for the fees charged.',
-  },
-  'horizon mismatch': {
-    term: 'Horizon Mismatch',
-    definition:
-      'A mismatch between your investment timeline (when you need the money) and the actual liquidity or lock-in profile of a holding — a key SEBI suitability concern.',
-  },
-  'sebi riskometer': {
+  'riskometer': {
     term: 'SEBI Riskometer',
-    definition:
-      'A mandatory SEBI-standardised risk dial on every mutual fund that classifies product risk into six levels — Low, Low-to-Moderate, Moderate, Moderately High, High, and Very High.',
+    definition: 'SEBI’s standardized 6-tier visual risk classification system (Low to Very High) indicating the principal risk level of mutual fund schemes and market products.',
+    category: 'regulatory',
+    aliases: ['riskometer', 'sebi riskometer'],
+  },
+  'yield trap': {
+    term: 'Yield Trap',
+    definition: 'An investment offering deceptively high dividend or coupon yields that conceal high default risk, falling asset value, or unsustainable payout structures.',
+    category: 'risk',
+    aliases: ['yield trap', 'yield-trap'],
+  },
+  'what-if simulator': {
+    term: 'What-If Simulator',
+    definition: 'A non-authoritative sandbox to test how hypothetical buy, sell, or rebalancing trades would impact your Health Score before placing real orders.',
+    category: 'metric',
+    aliases: ['what-if simulator', 'what-if simulation'],
+  },
+  'cooling-off nudge': {
+    term: 'Cooling-Off Nudge',
+    definition: 'A behavioral friction checkpoint that interrupts panic selling or large impulsive liquidations with historical market context before proceeding.',
+    category: 'risk',
+    aliases: ['cooling-off nudge', 'cooling off', 'cooling-off'],
+  },
+  'emergency fund': {
+    term: 'Emergency Fund',
+    definition: 'A dedicated, highly liquid cash buffer covering 3 to 6 months of mandatory living expenses to prevent distressed forced selling of investments.',
+    category: 'risk',
+    aliases: ['emergency fund', 'liquid buffer'],
+  },
+  'scores': {
+    term: 'SEBI SCORES',
+    definition: 'SEBI Complaints Redress System — a centralized web-based portal enabling investors to lodge and track complaints against regulated market entities.',
+    category: 'regulatory',
+    aliases: ['scores', 'sebi scores'],
   },
 };
 
-/**
- * Look up a glossary entry by any casing of the term.
- * Returns undefined if the term is not in the glossary.
- */
-export function lookupGlossaryTerm(term: string): GlossaryEntry | undefined {
-  return GLOSSARY[term.toLowerCase()];
+export function getGlossaryEntry(termKey: string): GlossaryEntry | undefined {
+  const normalized = termKey.toLowerCase().trim();
+  if (GLOSSARY[normalized]) return GLOSSARY[normalized];
+  for (const entry of Object.values(GLOSSARY)) {
+    if (entry.aliases?.some((a) => a.toLowerCase() === normalized)) {
+      return entry;
+    }
+  }
+  return undefined;
 }

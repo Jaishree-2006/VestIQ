@@ -1,0 +1,10 @@
+VIKRAM MALHOTRA
+PAN: XYZPK1234M
+Statement Period: 01-Jan-2026 to 30-Jun-2026
+NSDL Consolidated Account Statement
+
+Holdings Summary:
+1. Larsen & Toubro Ltd (INE018A01030) Units: 100 Price: 3500.00 Value: 350000.00 Broker: ICICI Direct Depository: NSDL
+2. Axis Bank Ltd (INE238A01034) Units: 200 Price: 1100.00 Value: 220000.00 Broker: Zerodha Depository: CDSL
+3. Embassy Office Parks REIT (INE041025011) Units: 500 Price: 340.00 Value: 170000.00 Broker: Groww Depository: CDSL
+Total Portfolio Value: 740000.00

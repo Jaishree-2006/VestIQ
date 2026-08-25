@@ -61,13 +61,12 @@ const PREMIUM_GATE_CONFIG: Record<string, { name: string; description: string; i
   },
   'ipo-screener': {
     name: 'IPO / NFO Suitability Screener',
-    description: 'Screen upcoming IPOs and NFOs against your actual concentration and SEBI Riskometer capacity before committing capital.',
+    description: 'Screen upcoming market issues against your actual portfolio concentration and SEBI risk profile before applying.',
     included: [
-      'Real-time concentration clash detection (SEBI 25% threshold)',
-      'SEBI Riskometer delta matching across all 6 tiers',
-      'Causal-chain explanation: why this issue conflicts with your portfolio',
-      'Pre-application \"What If\" portfolio impact simulation',
-      'Emerald positive confirmation for well-aligned issues',
+      'Pre-application sector concentration check',
+      'SEBI Riskometer alignment verification',
+      'Causal-chain conflict analysis',
+      'Proactive allocation safeguarding',
     ],
   },
 };

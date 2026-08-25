@@ -49,6 +49,33 @@ function isPdfMagicBytes(filePath) {
   });
 }
 
+// ── Load environment variables from .env if present ──────────────────────────
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    for (const line of envContent.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx > 0) {
+        const key = trimmed.substring(0, idx).trim();
+        const val = trimmed.substring(idx + 1).trim();
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+} catch (e) {
+  console.warn('[env] Warning loading .env file:', e.message);
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isValidUuid(id) {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
 const app = express();
 app.use(express.json());
 
@@ -57,7 +84,6 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_lV3JLgkY3yo
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Service-role client — bypasses RLS and can run DDL via rpc('exec_sql', ...)
-// Only used in /api/setup-db. Falls back gracefully if key is not set.
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
@@ -299,14 +325,24 @@ app.post('/api/parse-cas', (req, res, next) => {
     const parsedStatementPeriod = parsed.statement_period || parsed.statementPeriod || '';
     const parsedTotalPortfolioValue = parsed.total_portfolio_value || parsed.totalAssets || 0;
 
-    const { data: profileData, error: profileError } = await supabase
+    // Use service client or user's authenticated JWT client so RLS is satisfied
+    const dbClient = supabaseAdmin || (authResult.token && authResult.token !== 'demo-admin-token'
+      ? createClient(supabaseUrl, supabaseKey, {
+          auth: { persistSession: false },
+          global: { headers: { Authorization: `Bearer ${authResult.token}` } }
+        })
+      : supabase);
+
+    console.log(`[CAS Upload Parse] Received file: ${req.file.originalname}, Parsed Investor: "${parsedName}", PAN: "${parsedPan}", Total Value: ₹${parsedTotalPortfolioValue}, Holdings: ${parsedHoldings.length}`);
+
+    const { data: profileData, error: profileError } = await dbClient
       .from('profiles')
       .select('full_name, pan, email')
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
-      return res.status(500).json({ error: profileError.message || 'Failed to load profile' });
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.warn('[CAS Upload] Profile lookup warning:', profileError.message);
     }
 
     const profileName = String(profileData?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Investor');
@@ -328,29 +364,52 @@ app.post('/api/parse-cas', (req, res, next) => {
     if (!confirmIdentity) {
       if (similarity < 0.5) {
         outcome = 'low_name_similarity';
-        await supabase.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details }]);
+        const { error: insErr } = await dbClient.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details, total_portfolio_value: parsedTotalPortfolioValue || null, holdings_count: parsedHoldings.length || null, health_score_at_upload: null }]);
+        if (insErr) console.warn('[CAS Upload Audit] Insert failed (low_name_similarity):', insErr.message);
         return res.json({ status: 'low_name_similarity', parsedName, profileName, similarity, profilePan: maskedProfilePan, parsedPan: maskedParsedPan });
       }
       if (similarity < 0.8) {
         outcome = 'need_identity_confirmation';
-        await supabase.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details }]);
+        const { error: insErr } = await dbClient.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details, total_portfolio_value: parsedTotalPortfolioValue || null, holdings_count: parsedHoldings.length || null, health_score_at_upload: null }]);
+        if (insErr) console.warn('[CAS Upload Audit] Insert failed (need_identity_confirmation):', insErr.message);
         return res.json({ status: 'need_identity_confirmation', parsedName, profileName, similarity, profilePan: maskedProfilePan, parsedPan: maskedParsedPan });
       }
     }
 
     if (profilePan && parsedPan && profilePan !== parsedPan && !confirmPanMismatch) {
       outcome = 'pan_mismatch';
-      await supabase.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details }]);
+      const { error: insErr } = await dbClient.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details, total_portfolio_value: parsedTotalPortfolioValue || null, holdings_count: parsedHoldings.length || null, health_score_at_upload: null }]);
+      if (insErr) console.warn('[CAS Upload Audit] Insert failed (pan_mismatch):', insErr.message);
       return res.json({ status: 'pan_mismatch', parsedName, profileName, similarity, profilePan: maskedProfilePan, parsedPan: maskedParsedPan });
     }
 
     if (!profilePan && parsedPan) {
-      await supabase.from('profiles').update({ pan: parsedPan }).eq('id', user.id);
+      await dbClient.from('profiles').update({ pan: parsedPan }).eq('id', user.id);
     }
 
-    await supabase.from('cas_upload_audit').insert([{ user_id: user.id, parsed_name: parsedName, profile_name: profileName, similarity, profile_pan: profilePan, parsed_pan: parsedPan, outcome, details }]);
+    // Compute health score BEFORE inserting audit row so we can capture it as a snapshot
+    const healthScoreBreakdown = await computeHealthScoreWithSupabase(parsedHoldings, null, dbClient);
+    const healthScoreAtUpload = typeof healthScoreBreakdown?.score === 'number' ? Math.round(healthScoreBreakdown.score) : null;
 
-    const healthScoreBreakdown = await computeHealthScoreWithSupabase(parsedHoldings, null, supabase);
+    const { error: auditInsertError } = await dbClient.from('cas_upload_audit').insert([{
+      user_id: user.id,
+      parsed_name: parsedName,
+      profile_name: profileName,
+      similarity,
+      profile_pan: profilePan,
+      parsed_pan: parsedPan,
+      outcome,
+      details,
+      total_portfolio_value: parsedTotalPortfolioValue || null,
+      holdings_count: parsedHoldings.length || null,
+      health_score_at_upload: healthScoreAtUpload
+    }]);
+
+    if (auditInsertError) {
+      console.warn('[CAS Upload Audit] Insert error:', auditInsertError.message);
+    } else {
+      console.log(`[CAS Upload Audit] Successfully logged upload for user ${user.id}: ${parsedName} (₹${parsedTotalPortfolioValue}, score: ${healthScoreAtUpload})`);
+    }
 
     return res.json({
       status: 'success',
@@ -374,8 +433,10 @@ async function writeAuditLog({ user, action, entityType = 'system', entityId = n
     return { error: new Error(msg) };
   }
 
+  const validUserId = isValidUuid(user?.id) ? user.id : null;
+
   const payload = {
-    user_id: user?.id ?? null,
+    user_id: validUserId,
     action,
     entity_type: entityType,
     entity_id: entityId ? String(entityId) : null,
@@ -481,12 +542,13 @@ app.post('/api/admin/brokers', async (req, res) => {
       return res.status(503).json({ error: 'Service role key is required to manage whitelisted brokers.' });
     }
 
+    const validUserId = isValidUuid(user?.id) ? user.id : null;
     const schemaSupport = await getWhitelistedBrokerSchemaSupport();
     const insertPayload = {
       org_name: orgName,
       integration_type: integrationType,
       status: 'active',
-      onboarded_by: user.id,
+      onboarded_by: validUserId,
       onboarded_at: new Date().toISOString(),
       ...(schemaSupport.hasSebiRegNumber ? { sebi_reg_number: sebiRegNumber || null } : {}),
       ...(schemaSupport.hasContactEmail ? { contact_email: contactEmail || null } : {}),
@@ -544,11 +606,12 @@ app.patch('/api/admin/brokers/:id/status', async (req, res) => {
       return res.status(503).json({ error: 'Service role key is required to update whitelisted brokers.' });
     }
 
+    const validUserId = isValidUuid(user?.id) ? user.id : null;
     const payload = {
       status: nextStatus,
       updated_at: new Date().toISOString(),
       ...(nextStatus === 'revoked'
-        ? { revoked_at: new Date().toISOString(), revoked_by: user.id }
+        ? { revoked_at: new Date().toISOString(), revoked_by: validUserId }
         : { revoked_at: null, revoked_by: null })
     };
 
@@ -570,9 +633,8 @@ app.patch('/api/admin/brokers/:id/status', async (req, res) => {
       entityId: data.id,
       entityName: data.org_name,
       metadata: {
-        previous_status: nextStatus === 'revoked' ? 'active' : 'revoked',
         status: data.status,
-        reason: req.body?.reason || 'Admin status change via admin panel',
+        updated_at: data.updated_at,
       },
     });
 

@@ -126,7 +126,7 @@ export const ForBrokersPage: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-[#14213D] mb-2">Automated Audit Trails</h3>
             <p className="text-sm text-[#6B7280] leading-relaxed">
-              Every portfolio scan generates append-only audit records to demonstrate SEBI IA & RA compliance during inspections.
+              Every portfolio scan generates append-only audit records to demonstrate SEBI IA &amp; RA compliance during inspections.
             </p>
           </div>
 
@@ -134,7 +134,7 @@ export const ForBrokersPage: React.FC = () => {
             <div className="w-10 h-10 rounded-2xl bg-[#E6F4EA] text-[#2BB673] flex items-center justify-center mb-4 border border-[#A7F3D0]">
               <Users className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-[#14213D] mb-2">RM & Compliance Consoles</h3>
+            <h3 className="text-lg font-bold text-[#14213D] mb-2">RM &amp; Compliance Consoles</h3>
             <p className="text-sm text-[#6B7280] leading-relaxed">
               Separate views for relationship managers and compliance officers ensure clear role segregation and PII protection.
             </p>
@@ -151,28 +151,30 @@ export const ForBrokersPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Technical Guidance */}
+        {/* Technical Architecture & Security Architecture */}
         <div className="bg-white rounded-3xl p-8 border border-[#EDE9DF] shadow-xs mb-16">
           <h3 className="text-2xl font-extrabold text-[#14213D] mb-6 text-center">
-            Technical Architecture & Security Architecture
+            Technical Architecture &amp; Security Architecture
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Card 1 — Infrastructure & Encryption */}
             <div className="rounded-2xl border border-[#EDE9DF] bg-[#FAF8F5] p-5">
               <h4 className="text-base font-extrabold text-[#14213D] mb-3">Production-grade controls for investor data</h4>
               <ul className="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                <li>• TLS everywhere for HTTPS traffic with no insecure exceptions.</li>
-                <li>• AES-256 encryption at rest for database records and stored documents.</li>
-                <li>• PAN masking and sensitive identifier tokenization to prevent PII exposure.</li>
+                <li>• TLS 1.3 everywhere for HTTPS traffic with zero insecure exceptions.</li>
+                <li>• AES-256 encryption at rest for all database records and uploaded documents.</li>
+                <li>• Masked PAN display — raw PAN is never exposed in the client UI or general API responses.</li>
               </ul>
             </div>
 
+            {/* Card 2 — RBAC, DPDP & Audit Integrity */}
             <div className="rounded-2xl border border-[#EDE9DF] bg-[#FAF8F5] p-5">
-              <h4 className="text-base font-extrabold text-[#14213D] mb-3">Role-based access & compliance auditability</h4>
+              <h4 className="text-base font-extrabold text-[#14213D] mb-3">Governance, RBAC &amp; DPDP compliance</h4>
               <ul className="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                <li>• Strict RBAC separating Relationship Manager, Compliance, and Client views.</li>
-                <li>• Append-only tamper-evident audit trails for regulatory inspection readiness.</li>
-                <li>• India DPDP Act 2023 compliance with automated purging and right to erasure.</li>
+                <li>• Strict role-based access control (RBAC) scoping across Investor, RM, and Compliance Officer tiers.</li>
+                <li>• India DPDP Act 2023 aligned — explicit consent records with purpose limitation and data purge controls.</li>
+                <li>• Cryptographic SHA-256 hash-chained audit logging for tamper-evident regulatory inspections.</li>
               </ul>
             </div>
           </div>

@@ -1,0 +1,10 @@
+ANANYA RAO
+PAN: LMNOP4567Q
+Statement Period: 01-Jan-2026 to 30-Jun-2026
+Groww / Zerodha Consolidated Account Statement
+
+Holdings Summary:
+1. Reliance Industries Ltd (INE002A01018) Units: 50 Price: 2570.00 Value: 128500.00 Broker: Groww Depository: CDSL
+2. HDFC Bank Ltd (INE040A01034) Units: 100 Price: 1630.00 Value: 163000.00 Broker: Zerodha Depository: CDSL
+3. Infosys Ltd (INE009A01021) Units: 80 Price: 1237.33 Value: 98986.40 Broker: Groww Depository: CDSL
+Total Portfolio Value: 390486.40

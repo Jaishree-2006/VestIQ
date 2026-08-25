@@ -2,11 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AppSidebar } from '../layout/AppSidebar';
 import { PortfolioStoryTimeline } from '../portfolio/PortfolioStoryTimeline';
-import { Settings, Upload, Trash2, Download, ShieldCheck, Terminal, User, X, RotateCcw, UserCheck, UserX, Edit3, Sliders, Coins, AlertCircle, CheckCircle2, Users, Lock, Sparkles, Mail, Check, UserPlus, Clock, Languages } from 'lucide-react';
-import { RiskProfilerForm } from '../portfolio/RiskProfilerForm';
-import { getSebiRiskVisualTokens, SEBI_RISK_RANKS } from '../../utils/riskProfiler';
-import { LanguageToggle } from '../ui/LanguageToggle';
-
+import { Settings, Upload, Trash2, Download, ShieldCheck, Terminal, User, X, RotateCcw, Sliders, Check, Wallet, Info, Users, UserCheck, UserX, Link2, Lock, Sparkles, History, TrendingUp, TrendingDown, Clock, Activity, RefreshCw } from 'lucide-react';
+import { SEBI_RISK_QUESTIONS, calculateRiskCategory, type SebiRiskCategory } from '../../utils/riskProfiler';
+import type { CasUploadAuditRow } from '../../types';
 import { downloadJsonFile, downloadPortfolioExportPdf } from '../../utils/fileExport';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -19,51 +17,31 @@ export const SettingsPage: React.FC = () => {
     healthScoreEvents, 
     holdings, 
     redFlags, 
-    healthScore, 
-    nomineeStats, 
-    setNomineeStatus, 
-    riskCategory, 
-    riskProfilerAnswers, 
-    setRiskProfile,
-    monthlyExpensesEstimate,
-    setMonthlyExpensesEstimate,
-    role,
-    hasActivePremiumAccess,
-    user,
-    userRecord,
-    startFreeTrial,
-    householdLink,
-    householdPartnerSummary,
-    requestHouseholdLink,
-    acceptHouseholdLink,
+    healthScore,
+    userRiskCategory,
+    userRiskAnswers,
+    updateUserRiskCategory,
+    monthlyExpenses,
+    updateMonthlyExpenses,
+    householdLinks,
+    activeHouseholdLink,
+    sendHouseholdInvite,
+    acceptHouseholdInvite,
     revokeHouseholdLink,
-    toggleShareDetails,
+    toggleHoldingDetailConsent,
+    hasActivePremiumAccess,
+    startFreeTrial,
+    user,
+    uploadHistory,
+    refreshUploadHistory,
   } = useApp();
 
-  const [partnerEmailInput, setPartnerEmailInput] = useState<string>('');
-  const [householdNotice, setHouseholdNotice] = useState<string | null>(null);
-  const [isProcessingLink, setIsProcessingLink] = useState<boolean>(false);
+  const [householdEmailInput, setHouseholdEmailInput] = useState<string>('');
+  const [householdInviteStatus, setHouseholdInviteStatus] = useState<{ msg: string; isError?: boolean } | null>(null);
 
-  const [expenseInput, setExpenseInput] = useState<string>(
-    monthlyExpensesEstimate !== null ? String(monthlyExpensesEstimate) : ''
+  const [customExpenseInput, setCustomExpenseInput] = useState<string>(
+    monthlyExpenses ? String(monthlyExpenses) : ''
   );
-  const [expenseSavedNotice, setExpenseSavedNotice] = useState<string | null>(null);
-
-  const liquidBuffer = (holdings || [])
-    .filter(
-      (h) =>
-        h.category === 'cash' ||
-        /liquid|overnight|money market|savings|treasury/i.test(h.name) ||
-        /liquid|cash/i.test(h.ticker)
-    )
-    .reduce((sum, h) => sum + (Number(h.currentValue) || 0), 0);
-
-  const monthsCovered = monthlyExpensesEstimate && monthlyExpensesEstimate > 0
-    ? liquidBuffer / monthlyExpensesEstimate
-    : null;
-
-  const [isEditingRisk, setIsEditingRisk] = useState(false);
-  const [riskSavedNotice, setRiskSavedNotice] = useState<string | null>(null);
 
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -80,6 +58,14 @@ export const SettingsPage: React.FC = () => {
   const [exportFilename, setExportFilename] = useState<string>('');
   const [copiedExport, setCopiedExport] = useState<boolean>(false);
   const [showExportPreview, setShowExportPreview] = useState<boolean>(false);
+  const [isEditingRisk, setIsEditingRisk] = useState<boolean>(false);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, number>>(() => ({
+    horizon: userRiskAnswers.horizon || 2,
+    income: userRiskAnswers.income || 2,
+    experience: userRiskAnswers.experience || 2,
+    reaction: userRiskAnswers.reaction || 2,
+    liquidity: userRiskAnswers.liquidity || 2,
+  }));
 
   const resetUploadState = useCallback(() => {
     setIsUploading(false);
@@ -378,95 +364,421 @@ export const SettingsPage: React.FC = () => {
           )}
         </div>
 
+        {/* SEBI Riskometer Risk Profiler Settings Card */}
+        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-[#EDE9DF]">
+            <div className="flex items-center space-x-2">
+              <Sliders className="w-5 h-5 text-[#C57D25]" />
+              <div>
+                <h3 className="font-extrabold text-base text-[#14213D]">SEBI Riskometer Risk Profiler</h3>
+                <p className="text-xs text-[#6B7280]">
+                  Controls suitability thresholds and risk profile mismatch flags across all holdings.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-bold text-[#8B93A7]">Current Profile:</span>
+              <span className={`px-3 py-1 rounded-xl text-xs font-extrabold border ${
+                userRiskCategory === 'Low' || userRiskCategory === 'Low to Moderate' 
+                  ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]' 
+                  : userRiskCategory === 'Very High' 
+                  ? 'bg-[#FDF2F2] text-[#EF4444] border-[#FCA5A5]' 
+                  : 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]'
+              }`}>
+                {userRiskCategory}
+              </span>
+              <button
+                onClick={() => setIsEditingRisk(!isEditingRisk)}
+                className="px-3 py-1 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                {isEditingRisk ? 'Close Survey' : 'Re-take Survey'}
+              </button>
+            </div>
+          </div>
+
+          {isEditingRisk ? (
+            <div className="space-y-6 pt-2">
+              {SEBI_RISK_QUESTIONS.map((q, qIdx) => (
+                <div key={q.id} className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
+                  <div className="text-xs font-extrabold text-[#C57D25] uppercase tracking-wider mb-1">
+                    Question {qIdx + 1} of 5
+                  </div>
+                  <div className="text-sm font-bold text-[#14213D] mb-1">{q.title}</div>
+                  {q.description && (
+                    <p className="text-xs text-[#6B7280] mb-3">{q.description}</p>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {q.options.map((opt) => {
+                      const isSelected = (surveyAnswers[q.id] || userRiskAnswers[q.id] || 2) === opt.points;
+                      return (
+                        <button
+                          key={opt.points}
+                          onClick={() => {
+                            const next = { ...surveyAnswers, [q.id]: opt.points };
+                            setSurveyAnswers(next);
+                            const cat = calculateRiskCategory(next);
+                            updateUserRiskCategory(cat, next);
+                          }}
+                          className={`p-3 rounded-xl text-left text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer ${
+                            isSelected
+                              ? 'bg-white border-[#C57D25] text-[#C57D25] shadow-xs'
+                              : 'bg-white border-[#EDE9DF] text-[#475569] hover:bg-[#F6F4ED]'
+                          }`}
+                        >
+                          <span className="leading-snug">{opt.label}</span>
+                          {isSelected && <Check className="w-4 h-4 text-[#C57D25] shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-[#6B7280]">
+                  Updated Risk Category: <strong className="text-[#14213D]">{calculateRiskCategory(surveyAnswers)}</strong>
+                </span>
+                <button
+                  onClick={() => setIsEditingRisk(false)}
+                  className="px-5 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Save &amp; Close Profiler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-[#475569]">
+              <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EDE9DF]">
+                <span className="text-[#8B93A7] font-semibold block mb-0.5">Assessed Category:</span>
+                <span className="font-extrabold text-[#14213D] text-sm">{userRiskCategory}</span>
+              </div>
+              <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EDE9DF]">
+                <span className="text-[#8B93A7] font-semibold block mb-0.5">SEBI Benchmark:</span>
+                <span className="font-bold text-[#14213D]">6-Band Riskometer Framework</span>
+              </div>
+              <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EDE9DF]">
+                <span className="text-[#8B93A7] font-semibold block mb-0.5">Suitability Engine Integration:</span>
+                <span className="font-bold text-[#2BB673]">Active &amp; Monitoring Holdings</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Emergency Fund & Monthly Expenses Estimate Card */}
+        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-[#EDE9DF]">
+            <div className="flex items-center space-x-2">
+              <Wallet className="w-5 h-5 text-[#C57D25]" />
+              <div>
+                <h3 className="font-extrabold text-base text-[#14213D]">Emergency Fund &amp; Monthly Expenses</h3>
+                <p className="text-xs text-[#6B7280]">
+                  Required to verify your 3x liquid buffer safety threshold before allocating to illiquid assets.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-bold text-[#8B93A7]">Current Buffer Target:</span>
+              <span className={`px-3 py-1 rounded-xl text-xs font-extrabold border ${
+                monthlyExpenses 
+                  ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]' 
+                  : 'bg-[#FAF8F5] text-[#8B93A7] border-[#EDE9DF]'
+              }`}>
+                {monthlyExpenses ? `₹${(monthlyExpenses * 3).toLocaleString('en-IN')} (3 Mo)` : 'Not Configured'}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-extrabold text-[#14213D] mb-1">
+                Roughly what are your monthly living expenses?
+              </label>
+              <p className="text-xs text-[#6B7280] mb-3">
+                Used strictly to flag thin cash buffers before committing capital to long lock-ins. Self-reported &amp; private.
+              </p>
+
+              {/* Preset quick-select buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                {[
+                  { label: '₹25,000 / mo', value: 25000 },
+                  { label: '₹50,000 / mo', value: 50000 },
+                  { label: '₹1,00,000 / mo', value: 100000 },
+                  { label: '₹2,00,000 / mo', value: 200000 },
+                ].map((preset) => {
+                  const isSelected = monthlyExpenses === preset.value;
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => {
+                        updateMonthlyExpenses(preset.value);
+                        setCustomExpenseInput(String(preset.value));
+                      }}
+                      className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                        isSelected
+                          ? 'bg-[#FFF8EE] border-[#C57D25] text-[#C57D25] shadow-xs'
+                          : 'bg-[#FAF8F5] border-[#EDE9DF] text-[#475569] hover:bg-[#F6F4ED]'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Input & Clear Action */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative flex-1 w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8B93A7]">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    placeholder="Enter custom monthly expense (e.g. 75000)"
+                    value={customExpenseInput}
+                    onChange={(e) => setCustomExpenseInput(e.target.value)}
+                    className="w-full pl-8 pr-4 py-2.5 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium text-[#14213D] focus:outline-none focus:border-[#C57D25]"
+                  />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = Number(customExpenseInput);
+                      if (!isNaN(val) && val > 0) {
+                        updateMonthlyExpenses(val);
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    Save Expense
+                  </button>
+                  {monthlyExpenses !== null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateMonthlyExpenses(null);
+                        setCustomExpenseInput('');
+                      }}
+                      className="px-3 py-2.5 bg-[#FAF8F5] hover:bg-[#F6F4ED] text-[#EF4444] border border-[#EDE9DF] rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {monthlyExpenses && (
+              <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] flex items-center justify-between text-xs">
+                <span className="text-[#6B7280]">
+                  Active Emergency Safety Floor: <strong className="text-[#14213D]">₹{(monthlyExpenses * 3).toLocaleString('en-IN')}</strong> (3 × ₹{monthlyExpenses.toLocaleString('en-IN')})
+                </span>
+                <span className="text-[#2BB673] font-bold">✓ Active in Red Flag Detector</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Household & Family Portfolio Card (Premium) */}
+        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-[#EDE9DF]">
+            <div className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-[#C57D25]" />
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-extrabold text-base text-[#14213D]">Household &amp; Family Portfolio</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8]">
+                    Premium
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B7280]">
+                  Link a family member's account with 2-way consent to see combined net worth and overall asset allocation.
+                </p>
+              </div>
+            </div>
+            {activeHouseholdLink && (
+              <span className="px-3 py-1 bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0] rounded-xl text-xs font-extrabold inline-flex items-center space-x-1 self-start sm:self-auto">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>1 Active Household Link</span>
+              </span>
+            )}
+          </div>
+
+          {!hasActivePremiumAccess ? (
+            <div className="bg-[#FAF8F5] border border-[#EDE9DF] rounded-2xl p-5 text-center">
+              <div className="w-10 h-10 rounded-2xl bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] flex items-center justify-center mx-auto mb-2">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h4 className="font-bold text-sm text-[#14213D] mb-1">Household View is a Premium Safeguard</h4>
+              <p className="text-xs text-[#6B7280] max-w-md mx-auto mb-4">
+                Combine family portfolios, analyze aggregate diversification, and ensure mutual privacy protections.
+              </p>
+              <button
+                type="button"
+                onClick={startFreeTrial}
+                className="px-5 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Start 14-Day Free Trial to Unlock</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Form to link member */}
+              <div>
+                <label className="block text-xs font-extrabold text-[#14213D] mb-1">
+                  Link a household member
+                </label>
+                <p className="text-xs text-[#6B7280] mb-3">
+                  Enter the email address of your spouse or family member. They must accept from their own Settings page before any combined visibility is enabled.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="relative flex-1 w-full">
+                    <input
+                      type="email"
+                      placeholder="e.g. spouse@example.com"
+                      value={householdEmailInput}
+                      onChange={(e) => {
+                        setHouseholdEmailInput(e.target.value);
+                        setHouseholdInviteStatus(null);
+                      }}
+                      className="w-full px-4 py-2.5 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] text-xs font-medium text-[#14213D] focus:outline-none focus:border-[#C57D25]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!householdEmailInput) return;
+                      const res = await sendHouseholdInvite(householdEmailInput);
+                      if (res.success) {
+                        setHouseholdInviteStatus({ msg: `✅ Invitation sent to ${householdEmailInput}. Waiting for recipient acceptance.` });
+                        setHouseholdEmailInput('');
+                      } else {
+                        setHouseholdInviteStatus({ msg: `❌ ${res.error || 'Failed to send invite'}`, isError: true });
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0 inline-flex items-center justify-center space-x-1.5"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    <span>Send Household Invite</span>
+                  </button>
+                </div>
+
+                {householdInviteStatus && (
+                  <div className={`mt-2 text-xs font-semibold p-2.5 rounded-xl border ${
+                    householdInviteStatus.isError 
+                      ? 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]' 
+                      : 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]'
+                  }`}>
+                    {householdInviteStatus.msg}
+                  </div>
+                )}
+              </div>
+
+              {/* Active & Pending Links List */}
+              {householdLinks.filter(l => l.status !== 'revoked').length > 0 && (
+                <div className="pt-4 border-t border-[#EDE9DF] space-y-3">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-[#8B93A7]">
+                    Household Connections &amp; Invitations
+                  </div>
+
+                  {householdLinks.filter(l => l.status !== 'revoked').map((link) => {
+                    const isAccepted = link.status === 'accepted';
+                    const isIncoming = link.user_b_email.toLowerCase() === (user?.email || '').toLowerCase();
+
+                    return (
+                      <div key={link.id} className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-xs text-[#14213D]">
+                                {link.user_b_email === user?.email ? link.user_a_email : link.user_b_email}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                                isAccepted 
+                                  ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]' 
+                                  : 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]'
+                              }`}>
+                                {isAccepted ? 'Accepted & Active' : isIncoming ? 'Action Required: Incoming Invite' : 'Pending Acceptance'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-[#8B93A7] mt-0.5">
+                              {isAccepted 
+                                ? `Linked on ${new Date(link.accepted_at || link.requested_at).toLocaleDateString('en-IN')}` 
+                                : `Requested by ${link.user_a_email} on ${new Date(link.requested_at).toLocaleDateString('en-IN')}`}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {!isAccepted && isIncoming && (
+                              <button
+                                type="button"
+                                onClick={() => acceptHouseholdInvite(link.id)}
+                                className="px-3 py-1.5 bg-[#2BB673] hover:bg-[#239960] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                              >
+                                Accept Link
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => revokeHouseholdLink(link.id)}
+                              className="px-3 py-1.5 bg-[#FAF8F5] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#EDE9DF] rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center space-x-1"
+                            >
+                              <UserX className="w-3 h-3" />
+                              <span>{isAccepted ? 'Revoke Link' : 'Cancel / Decline'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Privacy Toggle: Holding-level sharing (Off by default) */}
+                        {isAccepted && (
+                          <div className="pt-2 border-t border-[#EDE9DF] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div>
+                              <div className="font-semibold text-[#14213D]">
+                                Share individual holding names
+                              </div>
+                              <p className="text-[11px] text-[#6B7280]">
+                                When disabled, only aggregate net worth &amp; asset allocations are shared. Both accounts must opt in to reveal individual holdings.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleHoldingDetailConsent(link.id, !link.share_holdings_a)}
+                              className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition-all cursor-pointer shrink-0 ${
+                                link.share_holdings_a && link.share_holdings_b
+                                  ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]'
+                                  : 'bg-white text-[#6B7280] border-[#EDE9DF] hover:bg-[#F6F4ED]'
+                              }`}
+                            >
+                              {link.share_holdings_a && link.share_holdings_b ? '✓ Both Consented (Detailed View)' : 'Aggregate Only (Default Safe)'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Privacy Guarantee Note */}
+              <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#EDE9DF] flex items-start space-x-2 text-xs text-[#6B7280]">
+                <ShieldCheck className="w-4 h-4 text-[#2BB673] shrink-0 mt-0.5" />
+                <span>
+                  <strong>Privacy Safeguard:</strong> Combined Household View calculates aggregate asset allocation without exposing individual trade histories or private account balances unless explicitly approved by both members.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Portfolio Story & Complete Health Score History */}
         <div className="mb-8">
           <PortfolioStoryTimeline
             events={healthScoreEvents}
           />
-        </div>
-
-        {/* SEBI Risk Profile & Suitability Assessment Card */}
-        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-[#F1EFE9]">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                <ShieldCheck className="w-4 h-4 text-[#2BB673]" />
-                <span>SEBI Investor Risk Profiler</span>
-              </div>
-              <h3 className="font-extrabold text-base text-[#14213D] mt-1">
-                Risk Profile & Suitability Assessment
-              </h3>
-              <p className="text-xs text-[#6B7280] mt-1">
-                Your assessed risk tolerance feeds directly into the Suitability Engine. Holdings exceeding your risk band trigger active compliance alerts.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              {(() => {
-                const riskTokens = getSebiRiskVisualTokens(riskCategory);
-                return (
-                  <span className={`px-3 py-1.5 rounded-xl text-xs font-extrabold ${riskTokens.badge}`}>
-                    {riskCategory ? `${riskCategory} (Riskometer ${SEBI_RISK_RANKS[riskCategory] || 3}/6)` : 'Not Assessed'}
-                  </span>
-                );
-              })()}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditingRisk(!isEditingRisk);
-                  setRiskSavedNotice(null);
-                }}
-                className="px-3.5 py-1.5 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center space-x-1.5"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-[#C57D25]" />
-                <span>{isEditingRisk ? 'Close Questionnaire' : riskCategory ? 'Retake Assessment' : 'Take Assessment'}</span>
-              </button>
-            </div>
-          </div>
-
-          {riskSavedNotice && (
-            <div className="mb-4 p-3 bg-[#E6F4EA] border border-[#A7F3D0] rounded-xl text-xs font-bold text-[#2BB673]">
-              {riskSavedNotice}
-            </div>
-          )}
-
-          {isEditingRisk ? (
-            <div className="mt-2 pt-2">
-              <RiskProfilerForm
-                initialAnswers={riskProfilerAnswers}
-                onComplete={(cat, ans) => {
-                  setRiskProfile(cat, ans);
-                  setIsEditingRisk(false);
-                  setRiskSavedNotice(`✅ Updated your SEBI risk profile to "${cat}" (Riskometer Level ${SEBI_RISK_RANKS[cat]}/6). Suitability alerts and Health Score updated.`);
-                }}
-                onCancel={() => setIsEditingRisk(false)}
-                submitLabel="Save Updated Profile & Recalculate Suitability"
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">SEBI Risk Band</div>
-                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">{riskCategory || 'Not Assessed'}</div>
-                <div className="text-[11px] text-[#6B7280] mt-1">{riskCategory ? `Level ${SEBI_RISK_RANKS[riskCategory] || 3} of 6 on standard Riskometer` : 'Pending questionnaire completion'}</div>
-              </div>
-              <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Suitability Rule</div>
-                <div className="font-extrabold text-[#14213D] text-sm mt-0.5">{riskCategory ? 'Automated Risk Filter' : 'Default Filter'}</div>
-                <div className="text-[11px] text-[#6B7280] mt-1">{riskCategory ? `Flags holdings with risk rating above ${riskCategory}` : 'Flags high-risk and locked-in mis-selling'}</div>
-              </div>
-              <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Assessment Status</div>
-                <div className={`font-extrabold text-sm mt-0.5 ${riskCategory ? 'text-[#2BB673]' : 'text-[#8B93A7]'}`}>
-                  {riskCategory ? 'Active & Applied' : 'Not Yet Assessed'}
-                </div>
-                <div className="text-[11px] text-[#6B7280] mt-1">
-                  {riskCategory ? 'Calculated across 5 regulatory parameters' : 'Complete 5-question SEBI assessment'}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Linked Accounts */}
@@ -491,558 +803,6 @@ export const SettingsPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Nominee Registration Status */}
-        {nomineeStats.total > 0 && (
-          <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-            <h3 className="font-extrabold text-base text-[#14213D] mb-1">Nominee Registration Status</h3>
-            <p className="text-xs text-[#6B7280] mb-4">
-              CAS statements don't include nominee data — self-report your status per account below.
-              Without a registered nominee, your family may need a lengthy court-order process to claim holdings.
-            </p>
-
-            <div className="space-y-3 text-xs">
-              {nomineeStats.brokers.map((acc) => {
-                const isSet     = acc.nominee_registered === true;
-                const isMissing = acc.nominee_registered === false;
-                const isUnset   = acc.nominee_registered === null;
-
-                const holdingCount = holdings.filter(h => h.broker === acc.broker).length;
-
-                const badgeCls = isSet
-                  ? 'bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0]'
-                  : isMissing
-                    ? 'bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5]'
-                    : 'bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8]';
-                const badgeLabel = isSet ? 'Nominee set ✓' : isMissing ? 'No nominee' : 'Not confirmed';
-
-                return (
-                  <div key={acc.broker} className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-bold text-[#14213D]">{acc.broker}</div>
-                      <div className="text-[10px] text-[#8B93A7]">
-                        {holdingCount} Holding{holdingCount !== 1 ? 's' : ''}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                      {/* Status badge */}
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold ${badgeCls}`}>
-                        {badgeLabel}
-                      </span>
-
-                      {/* Action buttons — reuse exact xs pill style from Settings buttons */}
-                      {!isSet && (
-                        <button
-                          onClick={() => setNomineeStatus(acc.broker, true)}
-                          className="px-2.5 py-0.5 bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0] rounded-full font-bold text-[10px] cursor-pointer hover:bg-[#D1FAE5] transition-colors"
-                        >
-                          Mark as set
-                        </button>
-                      )}
-                      {!isMissing && (
-                        <button
-                          onClick={() => setNomineeStatus(acc.broker, false)}
-                          className="px-2.5 py-0.5 bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5] rounded-full font-bold text-[10px] cursor-pointer hover:bg-[#FEE2E2] transition-colors"
-                        >
-                          Mark as missing
-                        </button>
-                      )}
-                      {!isUnset && (
-                        <button
-                          onClick={() => setNomineeStatus(acc.broker, null)}
-                          className="px-2.5 py-0.5 bg-[#FAF8F5] text-[#6B7280] border border-[#EDE9DF] rounded-full font-bold text-[10px] cursor-pointer hover:bg-[#F1EFE9] transition-colors"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Emergency Fund Adequacy & Monthly Living Expenses */}
-        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-[#F1EFE9]">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                <Coins className="w-4 h-4 text-[#C57D25]" />
-                <span>Emergency Fund Adequacy</span>
-              </div>
-              <h3 className="font-extrabold text-base text-[#14213D] mt-1">
-                Roughly what are your monthly expenses?
-              </h3>
-              <p className="text-xs text-[#6B7280] mt-1">
-                Self-report your estimated monthly expenses to evaluate your liquid buffer safety margin before committing capital into illiquid investments.
-              </p>
-            </div>
-
-            {monthsCovered !== null ? (
-              <span className={`px-3 py-1.5 rounded-xl text-xs font-extrabold shrink-0 ${
-                monthsCovered >= 3.0
-                  ? 'bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0]'
-                  : 'bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5]'
-              }`}>
-                {monthsCovered >= 3.0 ? `✓ Safe (${monthsCovered.toFixed(1)} mo buffer)` : `⚠ Thin Buffer (${monthsCovered.toFixed(1)} mo)`}
-              </span>
-            ) : (
-              <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] shrink-0">
-                Not Set · Check Inactive
-              </span>
-            )}
-          </div>
-
-          {expenseSavedNotice && (
-            <div className="mb-4 p-3 bg-[#E6F4EA] border border-[#A7F3D0] rounded-xl text-xs font-bold text-[#2BB673]">
-              {expenseSavedNotice}
-            </div>
-          )}
-
-          {/* Input & Quick Presets */}
-          <div className="mb-6">
-            <label className="block text-xs font-bold text-[#14213D] mb-2">
-              Monthly Living Expenses (₹)
-            </label>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-[200px] max-w-xs">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#8B93A7]">₹</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="5000"
-                  placeholder="e.g. 50000"
-                  value={expenseInput}
-                  onChange={(e) => setExpenseInput(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2.5 bg-[#FAF8F5] border border-[#EDE9DF] rounded-xl text-sm font-bold text-[#14213D] focus:outline-none focus:border-[#C57D25]"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const val = expenseInput.trim() ? Math.max(0, Number(expenseInput)) : null;
-                  setMonthlyExpensesEstimate(val);
-                  setExpenseSavedNotice(
-                    val !== null
-                      ? `✅ Saved estimated monthly expenses of ₹${val.toLocaleString('en-IN')}. Emergency Fund Adequacy check updated.`
-                      : '✅ Cleared monthly expenses estimate. Emergency Fund Adequacy check disabled.'
-                  );
-                }}
-                className="px-4 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                Save Estimate
-              </button>
-
-              {monthlyExpensesEstimate !== null && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpenseInput('');
-                    setMonthlyExpensesEstimate(null);
-                    setExpenseSavedNotice('✅ Cleared monthly expenses estimate.');
-                  }}
-                  className="px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#6B7280] rounded-xl text-xs font-bold transition-all cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {/* Quick Presets */}
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className="text-[11px] text-[#8B93A7] font-semibold mr-1">Quick presets:</span>
-              {[25000, 50000, 75000, 100000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    setExpenseInput(String(preset));
-                    setMonthlyExpensesEstimate(preset);
-                    setExpenseSavedNotice(`✅ Saved estimated monthly expenses of ₹${preset.toLocaleString('en-IN')}.`);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
-                    monthlyExpensesEstimate === preset
-                      ? 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]'
-                      : 'bg-[#FAF8F5] text-[#6B7280] border-[#EDE9DF] hover:border-[#C57D25]'
-                  }`}
-                >
-                  ₹{(preset / 1000).toFixed(0)}k / mo
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 3 Metric Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-              <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Current Liquid Buffer</div>
-              <div className="font-extrabold text-[#14213D] text-sm mt-0.5">
-                ₹{liquidBuffer.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-[#6B7280] mt-1">Cash & short-duration liquid holdings</div>
-            </div>
-
-            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-              <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Monthly Expenses</div>
-              <div className="font-extrabold text-[#14213D] text-sm mt-0.5">
-                {monthlyExpensesEstimate ? `₹${monthlyExpensesEstimate.toLocaleString('en-IN')} / mo` : 'Not Provided'}
-              </div>
-              <div className="text-[11px] text-[#6B7280] mt-1">Self-reported living expenditure</div>
-            </div>
-
-            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-              <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">3-Month Safety Floor</div>
-              <div className={`font-extrabold text-sm mt-0.5 ${
-                monthsCovered === null
-                  ? 'text-[#8B93A7]'
-                  : monthsCovered >= 3.0
-                    ? 'text-[#2BB673]'
-                    : 'text-[#EF4444]'
-              }`}>
-                {monthsCovered !== null ? `${monthsCovered.toFixed(1)} Months Coverage` : 'Needs Expense Input'}
-              </div>
-              <div className="text-[11px] text-[#6B7280] mt-1">
-                {monthsCovered !== null
-                  ? monthsCovered >= 3.0
-                    ? 'Buffer meets standard 3-month safety ceiling'
-                    : 'Buffer is below 3x monthly expenses'
-                  : 'Add expenses to evaluate adequacy'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Language & Explainability Preferences Card */}
-        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-[#F1EFE9]">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                <Languages className="w-4 h-4 text-[#C57D25]" />
-                <span>Explainability Language Preferences</span>
-              </div>
-              <h3 className="font-extrabold text-base text-[#14213D] mt-1">
-                Causal Explanation Language
-              </h3>
-              <p className="text-xs text-[#6B7280] mt-1">
-                Translate portfolio explainability sentences, Health Score reasons, and Red Flag alerts into Tamil while keeping holding names and rupee numbers intact.
-              </p>
-            </div>
-
-            <LanguageToggle />
-          </div>
-
-          <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] text-xs text-[#6B7280] leading-relaxed">
-            <span className="font-bold text-[#14213D]">Note on Typography: </span>
-            Selecting <span className="font-bold font-tamil text-[#14213D]">தமிழ் (Tamil)</span> activates native <code className="text-[#C57D25] bg-[#FFF8EE] px-1.5 py-0.5 rounded">Noto Sans Tamil</code> font rendering for Tamil explanation text, preventing missing glyphs while maintaining exact spacing and layout.
-          </div>
-        </div>
-
-        {/* Household & Family Portfolio Linking Card */}
-        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-[#F1EFE9]">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                <Users className="w-4 h-4 text-[#C57D25]" />
-                <span>Premium Feature · Household Consent Protocol</span>
-              </div>
-              <h3 className="font-extrabold text-base text-[#14213D] mt-1">
-                Household & Family Portfolio Linking
-              </h3>
-              <p className="text-xs text-[#6B7280] mt-1">
-                Optionally link a family member's account with explicit two-way consent to view combined net worth, asset allocation, and emergency buffer safety.
-              </p>
-            </div>
-
-            {(() => {
-              const isPrem = hasActivePremiumAccess || role === 'investor_premium' || role === 'admin';
-              if (!isPrem) {
-                return (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] shrink-0 flex items-center space-x-1">
-                    <Lock className="w-3 h-3" />
-                    <span>Premium Only</span>
-                  </span>
-                );
-              }
-              if (!householdLink || householdLink.status === 'revoked') {
-                return (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#FAF8F5] text-[#8B93A7] border border-[#EDE9DF] shrink-0">
-                    Not Linked
-                  </span>
-                );
-              }
-              if (householdLink.status === 'pending') {
-                return (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] shrink-0 flex items-center space-x-1">
-                    <Sparkles className="w-3 h-3 text-[#C57D25]" />
-                    <span>Pending Consent</span>
-                  </span>
-                );
-              }
-              return (
-                <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0] shrink-0 flex items-center space-x-1">
-                  <Check className="w-3 h-3" />
-                  <span>Household Linked</span>
-                </span>
-              );
-            })()}
-          </div>
-
-          {householdNotice && (
-            <div className="mb-4 p-3 bg-[#E6F4EA] border border-[#A7F3D0] rounded-xl text-xs font-bold text-[#2BB673] flex items-center justify-between">
-              <span>{householdNotice}</span>
-              <button onClick={() => setHouseholdNotice(null)} className="text-[#2BB673] hover:text-[#14213D] cursor-pointer">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Premium Gating Preview */}
-          {!hasActivePremiumAccess && role === 'investor_free' ? (
-            <div className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-5 text-xs text-[#63451B]">
-              <div className="flex items-start justify-between gap-4 flex-col sm:flex-row">
-                <div>
-                  <div className="font-extrabold text-sm text-[#92400E] mb-1">
-                    Upgrade to Premium for Combined Family Net Worth
-                  </div>
-                  <p className="text-xs text-[#6B7280] leading-relaxed max-w-xl">
-                    Household View enables unified family asset allocation, combined liquid buffer tracking, and estate readiness across multiple investor portfolios under strict DPDP 2-way consent.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    startFreeTrial();
-                    setHouseholdNotice('✅ Started 14-day Premium Trial! Household Linking is now unlocked.');
-                  }}
-                  className="px-4 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
-                >
-                  Start 14-Day Free Trial
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              {/* UNLINKED STATE */}
-              {(!householdLink || householdLink.status === 'revoked') && (
-                <div>
-                  <label className="block text-xs font-bold text-[#14213D] mb-2">
-                    Invite Family Member by Email
-                  </label>
-                  <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <div className="relative flex-1 min-w-[240px] max-w-md">
-                      <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B93A7]" />
-                      <input
-                        type="email"
-                        placeholder="e.g. rohit.sharma@example.com"
-                        value={partnerEmailInput}
-                        onChange={(e) => setPartnerEmailInput(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#FAF8F5] border border-[#EDE9DF] rounded-xl text-sm font-bold text-[#14213D] focus:outline-none focus:border-[#C57D25]"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={isProcessingLink || !partnerEmailInput.trim()}
-                      onClick={async () => {
-                        setIsProcessingLink(true);
-                        const res = await requestHouseholdLink(partnerEmailInput);
-                        setIsProcessingLink(false);
-                        if (res.success) {
-                          setHouseholdNotice(`✅ Link invitation sent to ${partnerEmailInput}. Recipient must accept from their own Settings page.`);
-                          setPartnerEmailInput('');
-                        } else {
-                          alert(res.error || 'Failed to send request.');
-                        }
-                      }}
-                      className="px-4 py-2.5 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 inline-flex items-center space-x-1.5"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>{isProcessingLink ? 'Sending...' : 'Send Link Request'}</span>
-                    </button>
-                  </div>
-
-                  {/* Demo Presets */}
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-[11px] text-[#8B93A7] font-semibold mr-1">Quick demo partner:</span>
-                    {['rohit.sharma@example.com', 'priya.sharma@example.com'].map((email) => (
-                      <button
-                        key={email}
-                        type="button"
-                        onClick={() => setPartnerEmailInput(email)}
-                        className="px-3 py-1 rounded-full text-xs font-bold border border-[#EDE9DF] bg-[#FAF8F5] text-[#6B7280] hover:border-[#C57D25] transition-colors cursor-pointer"
-                      >
-                        {email}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] text-xs text-[#6B7280] leading-relaxed">
-                    <span className="font-bold text-[#14213D]">🛡️ Two-Way Consent Boundary: </span>
-                    Sending a request does NOT grant immediate access. The recipient must explicitly accept from their own account. By default, only combined net worth and asset class totals are shared — individual holdings remain private.
-                  </div>
-                </div>
-              )}
-
-              {/* PENDING STATE */}
-              {householdLink && householdLink.status === 'pending' && (
-                <div className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-2xl p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#C57D25] mb-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Pending Mutual Consent</span>
-                      </div>
-                      <h4 className="font-extrabold text-sm text-[#92400E]">
-                        Link Request for {householdLink.partnerEmail}
-                      </h4>
-                      <p className="text-xs text-[#78350F] mt-1 leading-relaxed max-w-xl">
-                        Awaiting explicit confirmation. No financial totals or holdings are shared while the request remains pending.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={async () => {
-                          await acceptHouseholdLink(householdLink.id);
-                          setHouseholdNotice(`✅ Household link accepted! Combined Household View is now active on your Dashboard.`);
-                        }}
-                        className="px-3.5 py-2 bg-[#2BB673] hover:bg-[#23965E] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1"
-                        title="Simulate partner accepting the request"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Accept &amp; Link</span>
-                      </button>
-
-                      <button
-                        onClick={async () => {
-                          const confirmed = window.confirm('Cancel this pending household link request?');
-                          if (confirmed) {
-                            await revokeHouseholdLink();
-                            setHouseholdNotice('Cancelled pending link request.');
-                          }
-                        }}
-                        className="px-3.5 py-2 bg-white border border-[#EDE9DF] hover:bg-[#FDF2F2] hover:border-[#FCA5A5] text-[#EF4444] rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        Cancel Request
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ACCEPTED / ACTIVE STATE */}
-              {householdLink && householdLink.status === 'accepted' && (
-                <div>
-                  <div className="bg-[#F0FDF4] border border-[#A7F3D0] rounded-2xl p-5 mb-5">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#2BB673] mb-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Active Household Partnership</span>
-                        </div>
-                        <h4 className="font-extrabold text-sm text-[#166534]">
-                          Linked with {householdLink.partnerName} ({householdLink.partnerEmail})
-                        </h4>
-                        <p className="text-xs text-[#15803D] mt-1">
-                          Consent confirmed on {householdLink.acceptedAt ? new Date(householdLink.acceptedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'recently'}. Combined totals are active on your Dashboard.
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={async () => {
-                          const confirmed = window.confirm(
-                            `Revoke household link with ${householdLink.partnerName}? This will immediately remove combined visibility for both accounts.`
-                          );
-                          if (confirmed) {
-                            await revokeHouseholdLink();
-                            setHouseholdNotice('✅ Household link revoked immediately.');
-                          }
-                        }}
-                        className="px-3.5 py-2 bg-white border border-[#FCA5A5] hover:bg-[#FDF2F2] text-[#EF4444] rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-                      >
-                        Revoke Link
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Partner Aggregate Financial Breakdown Card */}
-                  {householdPartnerSummary && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-5">
-                      <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                        <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Partner Assets</div>
-                        <div className="font-extrabold text-[#14213D] text-sm mt-0.5 font-mono-num">
-                          ₹{householdPartnerSummary.totalValue.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280] mt-0.5">{householdPartnerSummary.holdingsCount} holding items</div>
-                      </div>
-
-                      <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                        <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Partner Equities</div>
-                        <div className="font-extrabold text-[#14213D] text-sm mt-0.5 font-mono-num">
-                          ₹{householdPartnerSummary.equitiesValue.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280] mt-0.5">TCS, Reliance, etc.</div>
-                      </div>
-
-                      <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                        <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Partner Fixed Income</div>
-                        <div className="font-extrabold text-[#14213D] text-sm mt-0.5 font-mono-num">
-                          ₹{householdPartnerSummary.bondsValue.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280] mt-0.5">GOI Sovereign Bonds</div>
-                      </div>
-
-                      <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                        <div className="text-[#8B93A7] text-[10px] font-bold uppercase tracking-wider">Partner REITs/InvITs</div>
-                        <div className="font-extrabold text-[#14213D] text-sm mt-0.5 font-mono-num">
-                          ₹{householdPartnerSummary.reitsValue.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[10px] text-[#6B7280] mt-0.5">Embassy REIT</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Granular Holding-Level Detail Toggle */}
-                  <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div>
-                      <div className="font-bold text-[#14213D] flex items-center space-x-1.5">
-                        <Lock className="w-3.5 h-3.5 text-[#C57D25]" />
-                        <span>Granular Holding-Level Sharing</span>
-                      </div>
-                      <p className="text-[#6B7280] mt-0.5">
-                        By default, only category totals and weights are combined. Both parties must separately opt in to see specific individual holding names.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const currentConsent = Boolean(householdLink.shareDetailsA);
-                          await toggleShareDetails(!currentConsent);
-                          setHouseholdNotice(
-                            !currentConsent
-                              ? '✅ Enabled your granular holding detail sharing.'
-                              : '✅ Restricted sharing back to aggregate category totals only.'
-                          );
-                        }}
-                        className={`px-3 py-1.5 rounded-xl font-bold transition-colors cursor-pointer ${
-                          householdLink.shareDetailsA
-                            ? 'bg-[#E6F4EA] text-[#2BB673] border border-[#A7F3D0]'
-                            : 'bg-white text-[#6B7280] border border-[#EDE9DF] hover:border-[#C57D25]'
-                        }`}
-                      >
-                        {householdLink.shareDetailsA ? '✓ Your Opt-In Active' : 'Enable Holding Details'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* SEPARATE: Demo & Rehearsal Utilities Panel */}
@@ -1074,6 +834,140 @@ export const SettingsPage: React.FC = () => {
           {demoResetStatus && (
             <div className="mt-4 p-3 bg-white border border-[#F7E5C8] rounded-xl text-xs font-bold text-[#C57D25]">
               {demoResetStatus}
+            </div>
+          )}
+        </div>
+
+        {/* ── Upload History ─────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-3xl p-6 border border-[#EDE9DF] shadow-xs mb-8">
+          <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#EDE9DF]">
+            <div className="flex items-center space-x-2">
+              <History className="w-4 h-4 text-[#C57D25]" />
+              <h3 className="font-extrabold text-base text-[#14213D]">Upload History</h3>
+              {uploadHistory.length > 0 && (
+                <span className="text-[10px] bg-[#FFF8EE] text-[#C57D25] border border-[#F7E5C8] px-2 py-0.5 rounded-full font-bold">
+                  {uploadHistory.length} Upload{uploadHistory.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => refreshUploadHistory()}
+              className="p-1.5 rounded-lg hover:bg-[#FAF8F5] text-[#8B93A7] hover:text-[#C57D25] transition-colors cursor-pointer"
+              title="Refresh upload history"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {uploadHistory.length === 0 ? (
+            <div className="py-5 px-4 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] text-center">
+              <p className="text-xs text-[#8B93A7]">
+                No upload history yet. Upload a CAS statement to see your history here.
+              </p>
+            </div>
+          ) : (
+            <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E8E4D9]">
+              {uploadHistory.map((row: CasUploadAuditRow, idx: number) => {
+                const prev = uploadHistory[idx + 1];
+                const deltaValue = prev?.total_portfolio_value != null && row.total_portfolio_value != null
+                  ? row.total_portfolio_value - prev.total_portfolio_value : null;
+                const deltaScore = prev?.health_score_at_upload != null && row.health_score_at_upload != null
+                  ? row.health_score_at_upload - prev.health_score_at_upload : null;
+                const hasDelta = idx < uploadHistory.length - 1;
+
+                const isGain = (deltaValue ?? 0) > 0 || (deltaScore ?? 0) > 0;
+                const isLoss = (deltaValue ?? 0) < 0 || (deltaScore ?? 0) < 0;
+
+                // Outcome badge styling
+                const outcomeLabel = row.outcome === 'success' ? 'Verified'
+                  : row.outcome === 'need_identity_confirmation' ? 'Name Check'
+                  : row.outcome === 'pan_mismatch' ? 'PAN Mismatch'
+                  : row.outcome === 'low_name_similarity' ? 'Low Match'
+                  : row.outcome ?? 'Unknown';
+                const outcomePill = row.outcome === 'success'
+                  ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]'
+                  : row.outcome === 'need_identity_confirmation'
+                  ? 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]'
+                  : 'bg-[#FDF2F2] text-[#EF4444] border-[#FCA5A5]';
+
+                const dotColor = isGain ? 'border-[#2BB673] text-[#2BB673]'
+                  : isLoss ? 'border-[#EF4444] text-[#EF4444]'
+                  : 'border-[#C57D25] text-[#C57D25]';
+
+                const deltaPill = isGain ? 'bg-[#E6F4EA] text-[#2BB673] border-[#A7F3D0]'
+                  : isLoss ? 'bg-[#FDF2F2] text-[#EF4444] border-[#FCA5A5]'
+                  : 'bg-[#FFF8EE] text-[#C57D25] border-[#F7E5C8]';
+
+                const uploadDate = new Date(row.created_at).toLocaleDateString('en-IN', {
+                  day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                return (
+                  <div key={row.id} className="relative group">
+                    {/* Node dot on vertical line */}
+                    <div className={`absolute -left-6 top-1.5 w-5 h-5 rounded-full border-2 bg-white flex items-center justify-center transition-transform group-hover:scale-110 ${dotColor}`}>
+                      {isGain ? <TrendingUp className="w-3 h-3" /> : isLoss ? <TrendingDown className="w-3 h-3" /> : <Activity className="w-2.5 h-2.5" />}
+                    </div>
+
+                    {/* Row card */}
+                    <div className="bg-[#FAF8F5] rounded-2xl p-4 border border-[#EDE9DF] transition-all hover:border-[#D4C7B5] shadow-xs">
+
+                      {/* Top row: date, outcome badge, delta pill */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <span className="text-xs text-[#8B93A7] font-medium flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {uploadDate}
+                          </span>
+                          <span className="text-gray-300">•</span>
+                          <span className={`inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full border ${outcomePill}`}>
+                            {outcomeLabel}
+                          </span>
+                        </div>
+
+                        {/* Delta pill — only when there's a prior upload to compare */}
+                        {hasDelta && (deltaValue !== null || deltaScore !== null) && (
+                          <div className={`inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border ${deltaPill} shrink-0`}>
+                            {deltaValue !== null && (
+                              <span>
+                                {deltaValue >= 0 ? '+' : ''}₹{Math.abs(deltaValue).toLocaleString('en-IN')}
+                              </span>
+                            )}
+                            {deltaScore !== null && (
+                              <span>{deltaScore >= 0 ? `+${deltaScore}` : deltaScore} pts</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Detail row */}
+                      <div className="mt-2 bg-white rounded-xl p-3 border border-[#EDE9DF]">
+                        <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#C57D25] mb-1.5">
+                          Investor: {row.parsed_name || '—'}
+                        </div>
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-medium text-[#14213D]">
+                          {row.total_portfolio_value != null && (
+                            <span>
+                              Portfolio Value:&nbsp;
+                              <span className="font-bold">₹{row.total_portfolio_value.toLocaleString('en-IN')}</span>
+                            </span>
+                          )}
+                          {row.health_score_at_upload != null && (
+                            <span>
+                              Health Score:&nbsp;
+                              <span className="font-bold">{row.health_score_at_upload}/100</span>
+                            </span>
+                          )}
+                          {row.holdings_count != null && (
+                            <span className="text-[#6B7280]">{row.holdings_count} holdings</span>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,26 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { AppSidebar } from '../layout/AppSidebar';
-import { AlertTriangle, ShieldCheck, CheckCircle, ArrowRight, FileText, Info, Copy, Check, X } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, CheckCircle, ArrowRight, FileText, Info, X, Copy, Check } from 'lucide-react';
 import { deriveRedFlagsFromHoldings } from '../../utils/redFlags';
-import { generateScoresComplaintDraft } from '../../utils/scoresGrievance';
 import type { RedFlagAlert } from '../../types';
-import { GlossaryTerm } from '../ui/GlossaryTerm';
-import { BrokerCredentialBadge } from '../ui/BrokerCredentialBadge';
-import { LanguageToggle } from '../ui/LanguageToggle';
-import { translateExplanation, getLanguageFontClass } from '../../utils/translations';
+import { GlossaryTerm } from '../common/GlossaryTerm';
+import { BrokerCredentialBadge } from '../common/BrokerCredentialBadge';
 
 const normalizeSeverity = (value: string) => value?.charAt(0).toUpperCase() + value?.slice(1) || 'Medium';
 
 export const RedFlagsPage: React.FC = () => {
-  const { redFlags, holdings, setCurrentPage, riskCategory, userName, uploadedCas, monthlyExpensesEstimate, preferredLanguage } = useApp();
+  const { redFlags, holdings, setCurrentPage, uploadedCas, monthlyExpenses, userRiskCategory } = useApp();
   const [filter, setFilter] = React.useState<'active' | 'resolved' | 'all'>('active');
-  const [selectedFlagForComplaint, setSelectedFlagForComplaint] = useState<RedFlagAlert | null>(null);
-  const [copiedComplaint, setCopiedComplaint] = useState<boolean>(false);
+  const [selectedFlagForDraft, setSelectedFlagForDraft] = React.useState<RedFlagAlert | null>(null);
+  const [copiedDraft, setCopiedDraft] = React.useState(false);
 
   const activeFlags = (redFlags || []).filter((flag) => !['resolved', 'acknowledged'].includes(flag.status || 'active'));
   const resolvedFlags = (redFlags || []).filter((flag) => ['resolved', 'acknowledged'].includes(flag.status || 'active'));
-  const liveFlags = activeFlags.length > 0 ? activeFlags : deriveRedFlagsFromHoldings(holdings, riskCategory, monthlyExpensesEstimate);
+  const liveFlags = activeFlags.length > 0 ? activeFlags : deriveRedFlagsFromHoldings(holdings, userRiskCategory, monthlyExpenses);
   const visibleFlags = filter === 'active' ? liveFlags : filter === 'resolved' ? resolvedFlags : [...liveFlags, ...resolvedFlags];
 
   const handleSimulate = (flag: { holdingId: string; holdingName: string; title: string }) => {
@@ -32,42 +29,89 @@ export const RedFlagsPage: React.FC = () => {
     setCurrentPage('shock-sandbox');
   };
 
+  const draftModalData = React.useMemo(() => {
+    if (!selectedFlagForDraft) return null;
+    const matchingHolding = holdings.find(
+      (h) => h.id === selectedFlagForDraft.holdingId || h.name.toLowerCase().includes(selectedFlagForDraft.holdingName.toLowerCase())
+    );
+    const isin = matchingHolding?.isin || (selectedFlagForDraft.holdingName.includes('Grid InvIT') ? 'INE081U23015' : matchingHolding?.ticker || 'N/A');
+    const lockIn = matchingHolding?.lockInMonths ? `${matchingHolding.lockInMonths} Months (${Math.round((matchingHolding.lockInMonths / 12) * 10) / 10} Years)` : (selectedFlagForDraft.description.includes('3-year') ? '36 Months (3 Years)' : 'None (Liquid)');
+    const liquidityTerms = matchingHolding?.liquidity_terms || (matchingHolding?.lockInMonths ? `${matchingHolding.lockInMonths} Months Lock-in` : 'Standard Secondary Market Liquidity');
+    const brokerName = matchingHolding?.broker || 'Groww / Relationship Manager';
+    
+    let investorName = 'Rajesh Kumar (PAN: ABCDE****F)';
+    if (uploadedCas?.investorName) {
+      investorName = uploadedCas.investorName;
+    }
+
+    const todayDate = new Date().toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const draftText = `SEBI SCORES COMPLAINT DRAFT
+--------------------------------------------------
+Date: ${todayDate}
+Category: Unsuitable Product Selling / Liquidity Horizon Mismatch
+
+INVESTOR & INTERMEDIARY DETAILS
+--------------------------------------------------
+Complainant / Investor: ${investorName}
+Intermediary / Broker / RM: ${brokerName}
+
+SECURITY DETAILS
+--------------------------------------------------
+Security Name: ${matchingHolding?.name || selectedFlagForDraft.holdingName}
+ISIN: ${isin}
+Lock-in / Liquidity Terms: ${lockIn} (${liquidityTerms})
+
+COMPLAINT STATEMENT & MISMATCH DESCRIPTION
+--------------------------------------------------
+SEBI Regulation / Benchmark: ${selectedFlagForDraft.sebiRuleRef}
+Issue Title: ${selectedFlagForDraft.title}
+
+Specific Mismatch Description:
+${selectedFlagForDraft.description}
+
+Remedial Action Requested:
+${selectedFlagForDraft.suggestedAction}
+--------------------------------------------------`;
+
+    return { draftText, isin, lockIn, brokerName, investorName, todayDate };
+  }, [selectedFlagForDraft, holdings, uploadedCas]);
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex text-[#14213D] font-sans overflow-x-hidden">
       <AppSidebar />
 
       <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
         
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#EDE9DF]">
-          <div>
-            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#EF4444]">
-              <AlertTriangle className="w-4 h-4" />
-              <span>SEBI-Aligned Mis-Selling Safeguard</span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
-              Red Flags & Suitability Detector
-            </h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              Catches inappropriate product selling, horizon mismatches, and hidden lock-in penalties before they impact your capital.
-            </p>
+        <div className="mb-8 pb-6 border-b border-[#EDE9DF]">
+          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#EF4444]">
+            <AlertTriangle className="w-4 h-4" />
+            <span>SEBI-Aligned Mis-Selling Safeguard</span>
           </div>
-          <div className="shrink-0">
-            <LanguageToggle />
-          </div>
+          <h1 className="text-3xl font-extrabold text-[#14213D] mt-1">
+            Red Flags & Suitability Detector
+          </h1>
+          <p className="text-sm text-[#6B7280] mt-1">
+            Catches inappropriate product selling, horizon mismatches, and hidden lock-in penalties before they impact your capital.
+          </p>
         </div>
 
-        {/* Muted Prompt when monthly expenses are not configured */}
-        {monthlyExpensesEstimate === null && (
-          <div className="mb-6 p-4 bg-[#FAF8F5] border border-[#EDE9DF] rounded-2xl flex items-center justify-between text-xs text-[#8B93A7]">
-            <div className="flex items-center space-x-2">
-              <Info className="w-4 h-4 text-[#C57D25] shrink-0" />
-              <span>Add your monthly expenses in Settings to enable the Emergency Fund Adequacy check.</span>
+        {/* Emergency Fund Check Prompt if monthly expenses estimate is not set */}
+        {(monthlyExpenses === null || monthlyExpenses === undefined) && (
+          <div className="mb-6 bg-[#FAF8F5] border border-[#EDE9DF] rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 text-xs text-[#8B93A7]">
+              <Info className="w-4 h-4 text-[#8B93A7] shrink-0" />
+              <span>Add your monthly expenses in Settings to enable this check.</span>
             </div>
             <button
               onClick={() => setCurrentPage('settings')}
-              className="font-bold text-[#C57D25] hover:underline cursor-pointer ml-3 shrink-0"
+              className="text-xs font-bold text-[#C57D25] hover:text-[#B06C19] transition-colors cursor-pointer self-start sm:self-auto underline"
             >
-              Configure in Settings &rarr;
+              Configure in Settings →
             </button>
           </div>
         )}
@@ -99,91 +143,91 @@ export const RedFlagsPage: React.FC = () => {
                 Your current portfolio looks well-aligned to your stated horizon and risk profile. Review the holdings matrix below or upload a revised CAS to re-run the scanner.
               </p>
             </div>
-          ) : visibleFlags.map((flag) => {
-            const flagHolding = holdings.find((h) => h.id === flag.holdingId || h.name === flag.holdingName);
-            const brokerReg = flag.broker_reg_number || flagHolding?.broker_reg_number;
-            const rmName = flag.rm_name || flagHolding?.rm_name || (flag.holdingName?.includes('Grid InvIT') || flag.description?.includes('Relationship Manager') ? 'Amit Verma (Relationship Manager)' : undefined);
-            const hasBrokerInfo = Boolean(brokerReg || rmName || flagHolding?.broker);
+          ) : visibleFlags.map((flag) => (
+            <div 
+              key={flag.id}
+              className="bg-white border-2 border-[#FCA5A5] rounded-3xl p-6 shadow-xs relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-2 h-full bg-[#EF4444]" />
 
-            const displayTitle = translateExplanation(flag.title, preferredLanguage);
-            const displayDescription = translateExplanation(flag.description, preferredLanguage);
-            const displaySuggestedAction = translateExplanation(flag.suggestedAction, preferredLanguage);
-
-            return (
-              <div 
-                key={flag.id}
-                className="bg-white border-2 border-[#FCA5A5] rounded-3xl p-6 shadow-xs relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-2 h-full bg-[#EF4444]" />
-
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5]">
-                        {normalizeSeverity(flag.severity)} Severity Flag
-                      </span>
-                      <span className="text-sm text-[#8B93A7] font-semibold">
-                        Target: {flag.holdingName}
-                      </span>
-                    </div>
-                    <h3 className={`text-xl font-extrabold text-[#991B1B] ${getLanguageFontClass(preferredLanguage)}`}>
-                      {displayTitle}
-                    </h3>
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#FDF2F2] text-[#EF4444] border border-[#FCA5A5]">
+                      {normalizeSeverity(flag.severity)} Severity Flag
+                    </span>
+                    <span className="text-sm text-[#8B93A7] font-semibold">
+                      Target: {flag.holdingName}
+                    </span>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        setSelectedFlagForComplaint(flag);
-                        setCopiedComplaint(false);
-                      }}
-                      className="px-4 py-2.5 bg-[#FAF8F5] border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
-                    >
-                      <FileText className="w-4 h-4 text-[#C57D25]" />
-                      <span>Draft <GlossaryTerm term="scores">SCORES</GlossaryTerm> Complaint</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleSimulate(flag)}
-                      className="px-4 py-2.5 bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer"
-                    >
-                      Simulate Risk Impact
-                    </button>
-                  </div>
+                  <h3 className="text-xl font-extrabold text-[#991B1B]">
+                    {flag.title}
+                  </h3>
                 </div>
 
-                {/* Broker / RM Credential Display */}
-                {hasBrokerInfo && (
-                  <div className="mb-3.5 p-3 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B93A7] mb-1.5">
-                      Intermediary / RM Attribution &amp; Credential Status
-                    </div>
-                    <BrokerCredentialBadge
-                      brokerName={flagHolding?.broker}
-                      brokerRegNumber={brokerReg}
-                      rmName={rmName}
-                    />
-                  </div>
-                )}
-
-                <p className={`text-sm text-[#475569] leading-relaxed mb-4 bg-[#FAF8F5] p-4 rounded-2xl border border-[#EDE9DF] ${getLanguageFontClass(preferredLanguage)}`}>
-                  {displayDescription}
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4 border-t border-[#F1EFE9]">
-                  <div>
-                    <span className="font-bold text-[#14213D] block mb-1">Suggested Remedial Action:</span>
-                    <p className={`text-[#6B7280] ${getLanguageFontClass(preferredLanguage)}`}>{displaySuggestedAction}</p>
-                  </div>
-                  <div>
-                    <span className="font-bold text-[#14213D] block mb-1">SEBI Compliance Benchmark:</span>
-                    <p className="text-[#C57D25] font-mono text-xs">{flag.sebiRuleRef}</p>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                    onClick={() => { setSelectedFlagForDraft(flag); setCopiedDraft(false); }}
+                    className="px-4 py-2.5 bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer shrink-0 inline-flex items-center gap-1"
+                  >
+                    <span>Draft <GlossaryTerm term="SCORES">SCORES</GlossaryTerm> Complaint</span>
+                  </button>
+                  <button
+                    onClick={() => handleSimulate(flag)}
+                    className="px-4 py-2.5 bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer shrink-0"
+                  >
+                    Simulate Risk Impact
+                  </button>
                 </div>
-
               </div>
-            );
-          })}
+
+              <p className="text-sm text-[#475569] leading-relaxed mb-4 bg-[#FAF8F5] p-4 rounded-2xl border border-[#EDE9DF]">
+                {flag.description}
+              </p>
+
+              {/* RM / Intermediary Credential Format Badge */}
+              {(() => {
+                const matchingHolding = holdings.find(h => h.id === flag.holdingId || h.name === flag.holdingName);
+                const regNum = flag.broker_reg_number !== undefined ? flag.broker_reg_number : matchingHolding?.broker_reg_number;
+                const isRmFlag = Boolean(flag.rm_name || matchingHolding?.rm_name || /RM|Relationship Manager/i.test(flag.title + flag.description));
+
+                if (isRmFlag || regNum !== undefined) {
+                  return (
+                    <div className="mb-4 p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF]">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8B93A7]">
+                          Sourcing Intermediary / RM SEBI Credential Check
+                        </span>
+                        <BrokerCredentialBadge
+                          brokerRegNumber={regNum}
+                          brokerName={matchingHolding?.broker || flag.rm_name || 'Relationship Manager'}
+                          showExplanation={false}
+                        />
+                      </div>
+                      <BrokerCredentialBadge
+                        brokerRegNumber={regNum}
+                        brokerName={matchingHolding?.broker || flag.rm_name || 'Relationship Manager'}
+                        showExplanation={true}
+                      />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4 border-t border-[#F1EFE9]">
+                <div>
+                  <span className="font-bold text-[#14213D] block mb-1">Suggested Remedial Action:</span>
+                  <p className="text-[#6B7280]">{flag.suggestedAction}</p>
+                </div>
+                <div>
+                  <span className="font-bold text-[#14213D] block mb-1">SEBI Compliance Benchmark:</span>
+                  <p className="text-[#C57D25] font-mono text-xs">{flag.sebiRuleRef}</p>
+                </div>
+              </div>
+
+            </div>
+          ))}
         </div>
 
         {/* Suitability Score Matrix */}
@@ -195,11 +239,11 @@ export const RedFlagsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-              <tr className="border-b border-[#EDE9DF] text-[#8B93A7] font-semibold uppercase tracking-wider">
+                <tr className="border-b border-[#EDE9DF] text-[#8B93A7] font-semibold uppercase tracking-wider">
                   <th className="py-3 px-3">Holding</th>
-                  <th className="py-3 px-3"><GlossaryTerm term="lock-in period">Lock-in Period</GlossaryTerm></th>
+                  <th className="py-3 px-3"><GlossaryTerm term="Lock-in Period" showIcon>Lock-in Period</GlossaryTerm></th>
                   <th className="py-3 px-3">Risk Level</th>
-                  <th className="py-3 px-3"><GlossaryTerm term="suitability score">Suitability Score</GlossaryTerm></th>
+                  <th className="py-3 px-3"><GlossaryTerm term="Suitability Score" showIcon>Suitability Score</GlossaryTerm></th>
                   <th className="py-3 px-3 text-right">Status</th>
                 </tr>
               </thead>
@@ -240,90 +284,64 @@ export const RedFlagsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* SEBI SCORES Complaint Draft Modal */}
-        {selectedFlagForComplaint && (() => {
-          const matchingHolding = holdings.find(
-            (h) => h.id === selectedFlagForComplaint.holdingId || h.name === selectedFlagForComplaint.holdingName || (selectedFlagForComplaint.holdingName && h.name.includes(selectedFlagForComplaint.holdingName))
-          );
-          const complaintDraft = generateScoresComplaintDraft({
-            flag: selectedFlagForComplaint,
-            holding: matchingHolding,
-            investorName: userName || uploadedCas?.investorName || 'Investor',
-            pan: uploadedCas?.pan,
-            riskCategory,
-          });
+        {/* Modal / Drawer for SCORES Complaint Draft */}
+        {selectedFlagForDraft && draftModalData && (
+          <div className="fixed inset-0 bg-[#14213D]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6">
+            <div className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-vestiq-lg border border-[#EDE9DF] relative max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#EDE9DF]">
+                <div className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5 text-[#EF4444]" />
+                  <h3 className="font-extrabold text-lg text-[#14213D]">SEBI SCORES Complaint Draft</h3>
+                </div>
+                <button
+                  onClick={() => { setSelectedFlagForDraft(null); setCopiedDraft(false); }}
+                  className="p-1 text-[#6B7280] hover:text-[#14213D] hover:bg-[#FAF8F5] rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-          return (
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] flex flex-col border border-[#EDE9DF] shadow-2xl">
-                
-                {/* Modal Header */}
-                <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#EDE9DF]">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#FFF8EE] border border-[#F7E5C8] text-[#C57D25] flex items-center justify-center font-bold shrink-0">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold uppercase tracking-wider text-[#C57D25]">
-                        SEBI SCORES Grievance Auto-Filer
-                      </div>
-                      <h3 className="text-lg font-extrabold text-[#14213D]">
-                        Pre-filled SCORES Complaint Draft
-                      </h3>
-                    </div>
-                  </div>
-
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#6B7280]">
+                    Pre-filled from Red Flag Detector &amp; Portfolio CAS
+                  </span>
                   <button
-                    onClick={() => setSelectedFlagForComplaint(null)}
-                    className="w-8 h-8 rounded-xl bg-[#FAF8F5] border border-[#EDE9DF] text-[#6B7280] hover:text-[#14213D] hover:bg-[#F6F4ED] flex items-center justify-center transition-colors cursor-pointer"
+                    onClick={() => {
+                      navigator.clipboard.writeText(draftModalData.draftText);
+                      setCopiedDraft(true);
+                      setTimeout(() => setCopiedDraft(false), 2000);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl font-bold text-xs cursor-pointer transition-colors flex items-center space-x-1.5"
                   >
-                    <X className="w-4 h-4" />
+                    {copiedDraft ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-[#2BB673]" />
+                        <span className="text-[#2BB673]">✓ Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-[#14213D]" />
+                        <span>Copy to Clipboard</span>
+                      </>
+                    )}
                   </button>
                 </div>
 
-                {/* Read-only Draft Text Block */}
-                <div className="flex-1 overflow-y-auto mb-4 bg-[#FAF8F5] border border-[#EDE9DF] rounded-2xl p-4 font-mono text-xs text-[#14213D] whitespace-pre-wrap select-text leading-relaxed">
-                  {complaintDraft}
-                </div>
+                <textarea
+                  readOnly
+                  value={draftModalData.draftText}
+                  rows={14}
+                  className="w-full p-4 bg-[#FAF8F5] rounded-2xl border border-[#EDE9DF] text-xs font-mono text-[#14213D] focus:outline-none resize-none leading-relaxed"
+                />
 
-                {/* Disclaimer Line */}
-                <div className="bg-[#FFF8EE] border border-[#F7E5C8] rounded-xl p-3 mb-4 text-xs text-[#6B7280] leading-relaxed">
-                  <span className="font-bold text-[#C57D25]">Disclaimer: </span>
+                <p className="text-xs text-[#6B7280] text-center pt-1">
                   This is a draft for your review — please verify details before filing on the official SEBI SCORES portal.
-                </div>
-
-                {/* Modal Action Footer */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#EDE9DF]">
-                  <span className="text-xs text-[#8B93A7] font-mono">
-                    Target: {selectedFlagForComplaint.holdingName}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(complaintDraft);
-                        setCopiedComplaint(true);
-                        setTimeout(() => setCopiedComplaint(false), 2000);
-                      }}
-                      className="px-4 py-2 bg-[#C57D25] hover:bg-[#B06C19] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
-                    >
-                      {copiedComplaint ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedComplaint ? '✓ Copied to Clipboard!' : 'Copy to Clipboard'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedFlagForComplaint(null)}
-                      className="px-4 py-2 bg-white border border-[#EDE9DF] hover:bg-[#F6F4ED] text-[#14213D] rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-
+                </p>
               </div>
             </div>
-          );
-        })()}
+          </div>
+        )}
 
       </main>
     </div>

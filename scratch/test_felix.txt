@@ -1,0 +1,10 @@
+FELIX PINTO
+PAN: ABCDE9876F
+Statement Period: 01-Jan-2026 to 30-Jun-2026
+CDSL Consolidated Account Statement
+
+Holdings Summary:
+1. ITC Ltd (INE154A01025) Units: 400 Price: 450.00 Value: 180000.00 Broker: Zerodha Depository: CDSL
+2. Tata Motors Ltd (INE155A01022) Units: 250 Price: 800.00 Value: 200000.00 Broker: Zerodha Depository: CDSL
+3. State Bank of India Bond 7.75% 2030 (INE062A08249) Units: 100 Price: 1000.00 Value: 100000.00 Broker: ICICI Direct Depository: NSDL
+Total Portfolio Value: 480000.00

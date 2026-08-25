@@ -106,14 +106,15 @@ def local_parse_extracted_text(raw: str) -> Dict[str, Any]:
     raw_upper = raw.upper().replace('\r', '')
 
     # Check for Priya Sharma sample statement match
+    # ONLY match Priya sample if PRIYA SHARMA is explicitly named in the text AND has multiple Priya holdings
     has_priya = 'PRIYA' in raw_upper and 'SHARMA' in raw_upper
     has_pfc = 'PFC' in raw_upper or 'POWER FINANCE' in raw_upper
     has_embassy = 'EMBASSY' in raw_upper or 'OFFICE PARKS' in raw_upper
-    has_grid = 'GRID' in raw_upper or 'INVIT' in raw_upper
+    has_grid = 'GRID' in raw_upper or 'GRIDINVIT' in raw_upper
     has_rel = 'RELIANCE' in raw_upper or 'INE002A01018' in raw_upper
     priya_score = sum([has_priya, has_pfc, has_embassy, has_grid, has_rel])
 
-    if priya_score >= 2:
+    if has_priya and (priya_score >= 4 or '1892882' in raw_upper or '18,92,882' in raw):
         return {
             'investor_name': 'Priya Sharma',
             'pan': 'ABCDE1234F',
@@ -198,11 +199,20 @@ def local_parse_extracted_text(raw: str) -> Dict[str, Any]:
 
     # ---------------- Generic CAS Parsing ----------------
     investor_name = 'Investor'
-    name_m = re.search(r"(?:Investor|Client|Holder|Name)\s*[:\-]?\s*([A-Za-z][A-Za-z\s.]{2,40})", raw, re.IGNORECASE)
+    name_m = re.search(r"(?:Investor|Client|Holder|Name|Account\s+Holder)\s*[:\-]?\s*([A-Za-z][A-Za-z\s.]{2,40})", raw, re.IGNORECASE)
     if name_m:
         candidate = name_m.group(1).strip()
         if len(candidate) > 3 and not candidate.lower().startswith('statement'):
             investor_name = candidate
+    else:
+        # Match name preceding PAN (e.g. "ANANYA RAO\nPAN: LMNOP4567Q" or "FELIX PINTO PAN:")
+        before_pan_m = re.search(r"([A-Za-z][A-Za-z\s.]{2,35})\s+(?:PAN|Permanent\s+Account\s+Number)", raw, re.IGNORECASE)
+        if before_pan_m:
+            candidate = before_pan_m.group(1).strip()
+            lines = [l.strip() for l in candidate.split('\n') if l.strip()]
+            candidate = lines[-1] if lines else candidate
+            if len(candidate) > 2 and not any(w in candidate.lower() for w in ['statement', 'period', 'consolidated', 'account', 'depository', 'cas']):
+                investor_name = candidate
 
     pan = 'ABCDE1234F'
     pan_m = re.search(r"\b([A-Z]{5}[0-9]{4}[A-Z])\b", raw)
@@ -217,54 +227,63 @@ def local_parse_extracted_text(raw: str) -> Dict[str, Any]:
     holdings = []
     flat = re.sub(r"\s+", " ", raw)
 
-    # 1. Match ISINs
-    isins = ISIN_RE.findall(flat)
+    # 1. Match ISINs per line
+    lines = [line.strip() for line in raw.split('\n') if line.strip()]
     seen_isins = set()
     h_idx = 1
 
-    for isin in isins:
+    for line in lines:
+        isin_m = ISIN_RE.search(line)
+        if not isin_m:
+            continue
+        isin = isin_m.group(1)
         if isin in seen_isins:
             continue
         seen_isins.add(isin)
 
-        pos = flat.find(isin)
-        start = max(0, pos - 150)
-        end = min(len(flat), pos + 250)
-        win = flat[start:end]
+        # Look for explicit labeled fields first
+        val_m = re.search(r"(?:Value|Current\s*Value|Valuation|Amt|Amount)\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)", line, re.IGNORECASE)
+        units_m = re.search(r"(?:Units|Qty|Quantity|Shares|Bal|Balance)\s*[:\-]?\s*([\d,]+\.?\d*)", line, re.IGNORECASE)
+        price_m = re.search(r"(?:Price|NAV|Rate|Cost|Current\s*Price)\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)", line, re.IGNORECASE)
 
-        # Extract numbers in window
-        num_matches = re.findall(r"[\d,]+\.?\d*", win)
-        nums = []
-        for nm in num_matches:
-            val = normalize_num_str(nm)
-            if val is not None and 0 < val < 1e10:
-                nums.append(val)
+        current_value = normalize_num_str(val_m.group(1)) if val_m else None
+        units = normalize_num_str(units_m.group(1)) if units_m else None
+        cost_or_nav = normalize_num_str(price_m.group(1)) if price_m else None
 
-        if not nums:
-            continue
+        # Fallback to numbers on the line
+        if current_value is None or units is None:
+            num_matches = re.findall(r"[\d,]+\.?\d*", line)
+            nums = [normalize_num_str(nm) for nm in num_matches if normalize_num_str(nm) is not None and 0 < normalize_num_str(nm) < 1e10]
+            if nums:
+                sorted_nums = sorted(nums, reverse=True)
+                if current_value is None:
+                    current_value = sorted_nums[0]
+                if units is None:
+                    units = next((n for n in sorted_nums if 1 <= n <= current_value * 0.5), 1.0)
+                if cost_or_nav is None:
+                    cost_or_nav = next((n for n in nums if 10 <= n <= current_value), current_value / max(1.0, units))
 
-        sorted_nums = sorted(nums, reverse=True)
-        current_value = sorted_nums[0] if sorted_nums else 10000.0
-        units = next((n for n in sorted_nums if 1 <= n <= current_value * 0.5), 1.0)
-        cost_or_nav = next((n for n in nums if 10 <= n <= current_value), current_value / max(1.0, units))
-        current_price = current_value / max(1.0, units)
+        units = max(1.0, float(units or 1.0))
+        current_value = float(current_value or 10000.0)
+        cost_or_nav = float(cost_or_nav or (current_value / units))
+        current_price = current_value / units
 
-        # Name before ISIN
-        before_isin = flat[start:pos].strip()
-        words = [w for w in before_isin.split(' ') if len(w) > 2 and re.match(r"^[A-Za-z]", w)]
-        sec_name = ' '.join(words[-4:]) if words else f"Security {isin}"
-        if len(sec_name) < 3:
-            sec_name = f"Holding {isin}"
+        # Clean security name before ISIN
+        pos = line.find(isin)
+        before_isin = line[:pos].strip()
+        before_isin = re.sub(r"^\d+[\.\)]\s*", "", before_isin)
+        before_isin = re.sub(r"[\(\[\{].*?[\)\]\}]", "", before_isin).strip()
+        before_isin = re.sub(r"[\s\(\[\{\:\-]+$", "", before_isin).strip()
+        sec_name = before_isin if len(before_isin) >= 3 else f"Security {isin}"
 
-        # Category
-        win_up = win.upper()
-        if any(b in win_up for b in ['BOND', 'NCD', 'DEBENTURE', 'GOVT', 'G-SEC']):
+        line_up = line.upper()
+        if any(b in line_up for b in ['BOND', 'NCD', 'DEBENTURE', 'GOVT', 'G-SEC']):
             cat = 'bonds'
             asset_cls = 'bond'
-        elif any(r in win_up for r in ['REIT', 'INVIT', 'EMBASSY', 'GRID', 'MINDSPACE']):
+        elif any(r in line_up for r in ['REIT', 'INVIT', 'EMBASSY', 'GRID', 'MINDSPACE']):
             cat = 'reits_invits'
             asset_cls = 'reit'
-        elif any(m in win_up for m in ['MUTUAL FUND', 'FOLIO', 'NAV', 'GROWTH', 'DIRECT', 'SCHEME']):
+        elif any(m in line_up for m in ['MUTUAL FUND', 'FOLIO', 'NAV', 'GROWTH', 'DIRECT', 'SCHEME']):
             cat = 'equities'
             asset_cls = 'mutual_fund'
         else:
@@ -272,16 +291,16 @@ def local_parse_extracted_text(raw: str) -> Dict[str, Any]:
             asset_cls = 'equity'
 
         broker = 'Zerodha'
-        if 'ICICI' in win_up:
-            broker = 'ICICI Direct'
-        elif 'GROWW' in win_up:
+        if 'GROWW' in line_up:
             broker = 'Groww'
-        elif 'RM' in win_up or 'RELATIONSHIP' in win_up:
+        elif 'ICICI' in line_up:
+            broker = 'ICICI Direct'
+        elif 'RM' in line_up or 'RELATIONSHIP' in line_up:
             broker = 'Relationship Manager'
-        elif 'CAMS' in win_up or 'KFINTECH' in win_up:
+        elif 'CAMS' in line_up or 'KFINTECH' in line_up:
             broker = 'CAMS / KFintech'
 
-        lock_in = 36 if any(l in win_up for l in ['LOCK', '3 YEAR', '36 MONTH']) else 0
+        lock_in = 36 if any(l in line_up for l in ['LOCK', '3 YEAR', '36 MONTH']) else 0
 
         holdings.append({
             'id': f'gen-{h_idx}',
@@ -293,7 +312,7 @@ def local_parse_extracted_text(raw: str) -> Dict[str, Any]:
             'category': cat,
             'broker_or_dp': broker,
             'broker': broker,
-            'depository': 'NSDL' if 'NSDL' in win_up else 'CDSL',
+            'depository': 'NSDL' if 'NSDL' in line_up else 'CDSL',
             'quantity': units,
             'units': units,
             'cost_or_nav': cost_or_nav,
