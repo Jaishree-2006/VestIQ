@@ -58,7 +58,6 @@ export const AppSidebar: React.FC = () => {
     { id: 'ipo-screener', label: 'IPO / NFO Screener', icon: <Sparkles className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'peer-benchmark', label: 'Peer Benchmark', icon: <Users className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'retrospective', label: 'Retrospective', icon: <History className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
-    { id: 'ipo-screener', label: 'IPO / NFO Screener', icon: <Sparkles className="w-4 h-4" />, roleOnly: ['investor_free', 'investor_premium'] },
     { id: 'broker-console', label: 'Broker Console', icon: <Briefcase className="w-4 h-4" />, badge: 'RM', roleOnly: ['broker_rm', 'admin'] },
     { id: 'compliance', label: 'Compliance', icon: <ShieldCheck className="w-4 h-4" />, badge: 'SEBI', roleOnly: ['compliance_officer', 'admin'] },
     { id: 'admin', label: 'Admin Panel', icon: <SlidersHorizontal className="w-4 h-4" />, roleOnly: ['admin'] },

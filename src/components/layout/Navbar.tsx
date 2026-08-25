@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { PageId, UserRole } from '../../types';
 import { ShieldCheck, ChevronDown, User, Crown, Briefcase, Settings, CheckCircle2 } from 'lucide-react';
-import { LanguageToggle } from '../ui/LanguageToggle';
 
 interface NavItem {
   id: string;
@@ -224,9 +223,6 @@ export const Navbar: React.FC = () => {
 
         {/* Action Buttons & Persona Switcher */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          
-          {/* Language Toggle */}
-          <LanguageToggle variant="compact" />
 
           {/* Demo Mode Label & Persona Switcher */}
           <div className="flex items-center space-x-2">
