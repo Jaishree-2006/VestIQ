@@ -125,6 +125,10 @@ interface AppContextType {
   // Upload History
   uploadHistory: CasUploadAuditRow[];
   refreshUploadHistory: () => Promise<void>;
+
+  // Language preference
+  preferredLanguage: 'en' | 'ta';
+  setPreferredLanguage: (lang: 'en' | 'ta') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -241,6 +245,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Upload History — fetched from cas_upload_audit on login, RLS-restricted to own rows
   const [uploadHistory, setUploadHistory] = useState<CasUploadAuditRow[]>([]);
+
+  // Language preference (persisted in localStorage)
+  const [preferredLanguage, setPreferredLanguageState] = useState<'en' | 'ta'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vestiq_preferred_language');
+      if (saved === 'ta') return 'ta';
+    }
+    return 'en';
+  });
+  const setPreferredLanguage = useCallback((lang: 'en' | 'ta') => {
+    setPreferredLanguageState(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vestiq_preferred_language', lang);
+    }
+  }, []);
 
   // Outcomes that represent real CAS upload events (exclude system/export audit entries)
   const UPLOAD_OUTCOMES = ['success', 'low_name_similarity', 'need_identity_confirmation', 'pan_mismatch'];
@@ -1409,6 +1428,8 @@ function computeEntryHash(prevHash: string, timestamp: string, action: string, t
         combinedHouseholdSummary,
         uploadHistory,
         refreshUploadHistory,
+        preferredLanguage,
+        setPreferredLanguage,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { SebiRiskCategory, RiskProfilerAnswers } from '../../types';
+import type { SebiRiskCategory } from '../../types';
+import type { RiskProfilerAnswers } from '../../utils/riskProfiler';
 import { SEBI_RISK_QUESTIONS, computeSebiRiskCategory, getSebiRiskVisualTokens, SEBI_RISK_RANKS } from '../../utils/riskProfiler';
 import { Check, ShieldCheck, ArrowRight, RotateCcw } from 'lucide-react';
 
@@ -18,14 +19,14 @@ export const RiskProfilerForm: React.FC<RiskProfilerFormProps> = ({
   submitLabel = 'Save & Apply SEBI Risk Profile',
   isCompact = false,
 }) => {
-  const [answers, setAnswers] = useState<Partial<RiskProfilerAnswers>>(initialAnswers);
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers as Record<string, string>);
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number>(0);
 
   const { category, score, maxScore, answeredCount, totalQuestions } = computeSebiRiskCategory(answers);
   const riskTokens = getSebiRiskVisualTokens(category);
   const isAllAnswered = answeredCount === totalQuestions;
 
-  const handleSelectOption = (questionId: keyof RiskProfilerAnswers, optionValue: string) => {
+  const handleSelectOption = (questionId: string, optionValue: string) => {
     const nextAnswers = { ...answers, [questionId]: optionValue };
     setAnswers(nextAnswers);
     if (activeQuestionIdx < SEBI_RISK_QUESTIONS.length - 1) {
@@ -63,7 +64,7 @@ export const RiskProfilerForm: React.FC<RiskProfilerFormProps> = ({
                 {category} Risk
               </span>
               <span className="text-xs text-[#6B7280]">
-                • Riskometer Level {SEBI_RISK_RANKS[category]}/6 (Score {score}/{maxScore})
+                • Riskometer Level {SEBI_RISK_RANKS[category as SebiRiskCategory]}/6 (Score {score}/{maxScore})
               </span>
             </div>
           </div>
@@ -101,7 +102,7 @@ export const RiskProfilerForm: React.FC<RiskProfilerFormProps> = ({
                     {q.title}
                   </h4>
                   <p className="text-xs text-[#6B7280] mt-0.5">
-                    {q.subtitle}
+                    {q.description}
                   </p>
                 </div>
                 {selectedVal && (
@@ -114,11 +115,11 @@ export const RiskProfilerForm: React.FC<RiskProfilerFormProps> = ({
               {/* Option choices */}
               <div className="grid grid-cols-1 gap-2 mt-3">
                 {q.options.map((opt) => {
-                  const isSelected = selectedVal === opt.value;
+                  const isSelected = selectedVal === opt.label;
                   return (
                     <div
-                      key={opt.value}
-                      onClick={() => handleSelectOption(q.id, opt.value)}
+                      key={opt.label}
+                      onClick={() => handleSelectOption(q.id, opt.label)}
                       className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
                           ? 'bg-[#FFF8EE] border-[#C57D25] text-[#14213D] shadow-xs'
@@ -129,11 +130,6 @@ export const RiskProfilerForm: React.FC<RiskProfilerFormProps> = ({
                         <div className={`text-xs ${isSelected ? 'font-extrabold text-[#14213D]' : 'font-medium text-[#14213D]'}`}>
                           {opt.label}
                         </div>
-                        {opt.sublabel && (
-                          <div className="text-[11px] text-[#8B93A7] mt-0.5 truncate">
-                            {opt.sublabel}
-                          </div>
-                        )}
                       </div>
                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
                         isSelected ? 'border-[#C57D25] bg-[#C57D25] text-white' : 'border-[#CBD5E1] bg-white'

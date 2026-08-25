@@ -126,3 +126,7 @@ export function getGlossaryEntry(termKey: string): GlossaryEntry | undefined {
   }
   return undefined;
 }
+
+/** Alias used by GlossaryTerm component */
+export const lookupGlossaryTerm = getGlossaryEntry;
+

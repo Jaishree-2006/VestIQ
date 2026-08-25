@@ -177,6 +177,24 @@ export interface RedFlagAlert {
 }
 
 import type { SebiRiskCategory } from '../utils/riskProfiler';
+export type { SebiRiskCategory } from '../utils/riskProfiler';
+
+export type RiskProfilerAnswers = {
+  horizon: string;
+  incomeStability: string;
+  experience: string;
+  lossReaction: string;
+  liquidityNeed: string;
+};
+
+export interface SebiRegValidationResult {
+  isValid: boolean;
+  regNumber: string;
+  prefix?: string;
+  intermediaryType?: string;
+  status: 'valid_format' | 'invalid_format' | 'missing';
+  explanation: string;
+}
 
 export interface ClientProfile {
   id: string;
